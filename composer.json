@@ -1,0 +1,11 @@
+{
+  "name": "wyrihaximus/makefiles",
+  "description": "\ud83d\udee0\ufe0f Test utilities for api-clients packages",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Cees-Jan Kiewiet",
+      "email": "ceesjank@gmail.com"
+    }
+  ]
+}
