@@ -2,10 +2,60 @@
   "name": "wyrihaximus/makefiles",
   "description": "\ud83d\udee0\ufe0f Test utilities for api-clients packages",
   "license": "MIT",
+  "type": "composer-plugin",
   "authors": [
     {
       "name": "Cees-Jan Kiewiet",
       "email": "ceesjank@gmail.com"
     }
-  ]
+  ],
+  "require": {
+    "php": "^8.2",
+    "ext-json": "^8.2",
+    "composer-plugin-api": "^2"
+  },
+  "require-dev": {
+    "wyrihaximus/async-test-utilities": "^8.0.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "WyriHaximus\\Makefiles\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "WyriHaximus\\Tests\\Makefiles\\": "tests"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/package-versions-deprecated": true,
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "drupol/composer-packages": true,
+      "ergebnis/composer-normalize": true,
+      "icanhazstring/composer-unused": true,
+      "infection/extension-installer": true,
+      "mindplay/composer-locator": true
+    },
+    "platform": {
+      "php": "8.2.13"
+    },
+    "sort-packages": true
+  },
+  "extra": {
+    "class": "WyriHaximus\\Makefiles\\Composer\\Installer"
+  },
+  "scripts": {
+    "post-install-cmd": [
+      "composer normalize",
+      "composer update --lock --no-scripts"
+    ],
+    "post-update-cmd": [
+      "composer normalize",
+      "composer update --lock --no-scripts"
+    ],
+    "pre-autoload-dump": [
+      "WyriHaximus\\Makefiles\\Composer\\Installer::findEventListeners"
+    ]
+  }
 }

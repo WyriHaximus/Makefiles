@@ -1,0 +1,48 @@
+{
+    "timeout": 120,
+    "source": {
+        "directories": [
+            "src"
+        ]
+    },
+    "logs": {
+        "text": "./var/infection.log",
+        "summary": "./var/infection-summary.log",
+        "json": "./var/infection.json",
+        "perMutator": "./var/infection-per-mutator.md"
+    },
+    "minMsi": 100,
+    "minCoveredMsi": 100,
+    "ignoreMsiWithNoMutations": true,
+    "phpUnit": {
+        "configDir": "./etc/qa/"
+    },
+    "mutators": {
+        "@default": true,
+        "ArrayItemRemoval": false,
+        "CastString": false,
+        "Concat": false,
+        "ConcatOperandRemoval": false,
+        "Throw_": false,
+        "Identical": false,
+        "MethodCallRemoval": false,
+        "Continue_": false,
+        "FunctionCallRemoval": false,
+        "InstanceOf_": false,
+        "Minus": false,
+        "RoundingFamily": false,
+        "ArrayOneItem": false,
+        "Foreach_": false,
+        "LogicalOr": false,
+        "UnwrapRtrim": false,
+        "LogicalNot": false,
+        "NotIdentical": false,
+        "IfNegation": false,
+        "IncrementInteger": false,
+        "DecrementInteger": false,
+        "PublicVisibility": false,
+        "ProtectedVisibility": false,
+        "LogicalOrSingleSubExprNegation": false,
+        "FalseValue": false
+    }
+}
