@@ -1,0 +1,15 @@
+parameters:
+	ergebnis:
+		noExtends:
+			classesAllowedToBeExtended:
+				- Composer\IO\NullIO
+	ignoreErrors:
+		-
+			message: '#thecodingmachine#'
+			path: ../../src/Composer/Installer.php
+		-
+			message: '#thecodingmachine#'
+			path: ../../tests/Composer/InstallerTest.php
+
+includes:
+	- ../../vendor/wyrihaximus/test-utilities/rules.neon
