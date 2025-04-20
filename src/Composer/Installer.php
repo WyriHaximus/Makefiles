@@ -112,7 +112,11 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
         $makefileContents = preg_replace_callback(
             '/include includes\/([a-zA-Z.]+)/',
-            static fn (array $matches): string => self::loadInclude(
+            static fn (array $matches): string => $matches[1] === 'EXTRA.mk' ? self::loadInclude(
+                $io,
+                $rootPackagePath,
+                'etc/Makefile',
+            ) : self::loadInclude(
                 $io,
                 $referenceRoot . 'includes' . DIRECTORY_SEPARATOR,
                 $matches[1],

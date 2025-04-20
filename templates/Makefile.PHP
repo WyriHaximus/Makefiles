@@ -33,6 +33,7 @@ else
 endif
 
 include includes/All.mk
+include includes/EXTRA.mk
 include includes/PHP.mk
 include includes/Shell.mk
 include includes/Help.mk
