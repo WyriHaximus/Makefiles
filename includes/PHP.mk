@@ -1,39 +1,39 @@
-syntax-php: ## Lint PHP syntax
+syntax-php: ## Lint PHP syntax ##*LH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
 cs-fix: ## Fix any automatically fixable code style issues ###
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml -vvvv
 
-cs: ## Check the code for code style issues
+cs: ## Check the code for code style issues ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/phpcs --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml
 
-stan: ## Run static analysis (PHPStan)
+stan: ## Run static analysis (PHPStan) ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/phpstan analyse src tests --level max --ansi -c ./etc/qa/phpstan.neon
 
-unit-testing: ## Run tests
+unit-testing: ## Run tests ##*A*##
 	$(DOCKER_RUN) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml
 	$(DOCKER_RUN) test -n "$(COVERALLS_REPO_TOKEN)" && test -n "$(COVERALLS_RUN_LOCALLY)" && test -f ./var/tests-unit-clover-coverage.xml && vendor/bin/php-coveralls -v --coverage_clover ./build/logs/clover.xml --json_path ./var/tests-unit-clover-coverage-upload.json || true
 
-unit-testing-raw: ## Run tests ####
+unit-testing-raw: ## Run tests ##*D*##
 	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml
 	test -n "$(COVERALLS_REPO_TOKEN)" && test -n "$(COVERALLS_RUN_LOCALLY)" && test -f ./var/tests-unit-clover-coverage.xml && ./vendor/bin/php-coveralls -v --coverage_clover ./build/logs/clover.xml --json_path ./var/tests-unit-clover-coverage-upload.json || true
 
-mutation-testing: ## Run mutation testing
+mutation-testing: ## Run mutation testing ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/infection --ansi --log-verbosity=all --threads=$(THREADS) || (cat ./var/infection.log && false)
 
 mutation-testing-raw: ## Run mutation testing ####
 	vendor/bin/infection --ansi --log-verbosity=all --threads=$(THREADS) || (cat ./var/infection.log && false)
 
-composer-require-checker: ## Ensure we require every package used in this package directly
+composer-require-checker: ## Ensure we require every package used in this package directly ##*C*##
 	$(DOCKER_RUN) vendor/bin/composer-require-checker --ignore-parse-errors --ansi -vvv --config-file=./etc/qa/composer-require-checker.json
 
-composer-unused: ## Ensure we don't require any package we don't use in this package directly
+composer-unused: ## Ensure we don't require any package we don't use in this package directly ##*C*##
 	$(DOCKER_RUN) vendor/bin/composer-unused --ansi --configuration=./etc/qa/composer-unused.php
 
 libyear: ### Calculate how many libyear this package is behind with dependencies
 	$(DOCKER_RUN) vendor/bin/libyear
 
-backward-compatibility-check: ## Check code for backwards incompatible changes
+backward-compatibility-check: ## Check code for backwards incompatible changes ##*C*##
 	$(MAKE) backward-compatibility-check-raw || true
 
 backward-compatibility-check-raw: ## Check code for backwards incompatible changes, doesn't ignore the failure ###
