@@ -14,6 +14,7 @@ use Composer\Repository\RepositoryManager;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Mockery;
+use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\StreamOutput;
 use WyriHaximus\Makefiles\Composer\Installer;
 use WyriHaximus\TestUtilities\TestCase;
@@ -37,7 +38,7 @@ use const DIRECTORY_SEPARATOR;
 
 final class InstallerTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function generate(): void
     {
         $vendorDir = $this->getTmpDir() . 'vendor' . DIRECTORY_SEPARATOR;

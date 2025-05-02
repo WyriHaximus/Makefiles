@@ -80,6 +80,10 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             return;
         }
 
+        if (! is_array($json['require-dev'])) {
+            return;
+        }
+
         foreach ($json['require-dev'] as $package => $targetVersion) {
             if ($package === 'wyrihaximus/makefiles') {
                 self::generateMakefile($event->getIO(), $rootPackagePath, false);
@@ -93,8 +97,8 @@ final class Installer implements PluginInterface, EventSubscriberInterface
     private static function getVendorDir(Composer $composer): string
     {
         $vendorDir = $composer->getConfig()->get('vendor-dir');
-        if (! is_string($vendorDir) || $vendorDir === '' || ! file_exists($vendorDir)) {
-            throw new Exception('vendor-dir must be a string'); // @phpstan-ignore-line
+        if ($vendorDir === '' || ! file_exists($vendorDir)) {
+            throw new Exception('vendor-dir must be a string');
         }
 
         return $vendorDir;
