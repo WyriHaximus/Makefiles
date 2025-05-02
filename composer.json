@@ -10,8 +10,8 @@
     }
   ],
   "require": {
-    "php": "^8.2",
-    "ext-json": "^8.2",
+    "php": "^8.3",
+    "ext-json": "^8.3",
     "composer-plugin-api": "^2"
   },
   "require-dev": {
@@ -38,7 +38,7 @@
       "mindplay/composer-locator": true
     },
     "platform": {
-      "php": "8.2.13"
+      "php": "8.3.13"
     },
     "sort-packages": true
   },
