@@ -59,10 +59,10 @@ unit-testing-raw: ## Run tests ##*D*## ####
 	test -n "$(COVERALLS_REPO_TOKEN)" && test -n "$(COVERALLS_RUN_LOCALLY)" && test -f ./var/tests-unit-clover-coverage.xml && ./vendor/bin/php-coveralls -v --coverage_clover ./build/logs/clover.xml --json_path ./var/tests-unit-clover-coverage-upload.json || true
 
 mutation-testing: ## Run mutation testing ##*LCH*##
-	$(DOCKER_RUN) vendor/bin/infection --ansi --log-verbosity=all --threads=$(THREADS) || (cat ./var/infection.log && false)
+	$(DOCKER_RUN) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --threads=$(THREADS) || (cat ./var/infection.log && false)
 
 mutation-testing-raw: ## Run mutation testing ####
-	vendor/bin/infection --ansi --log-verbosity=all --threads=$(THREADS) || (cat ./var/infection.log && false)
+	vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --threads=$(THREADS) || (cat ./var/infection.log && false)
 
 composer-require-checker: ## Ensure we require every package used in this package directly ##*C*##
 	$(DOCKER_RUN) vendor/bin/composer-require-checker --ignore-parse-errors --ansi -vvv --config-file=./etc/qa/composer-require-checker.json
