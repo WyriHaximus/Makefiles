@@ -1,14 +1,14 @@
 syntax-php: ## Lint PHP syntax ##*LH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
+rector-upgrade: ## Upgrade any automatically upgradable old code ###
+	$(DOCKER_RUN) vendor/bin/rector -c ./etc/qa/rector.php
+
 cs-fix: ## Fix any automatically fixable code style issues ###
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml -vvvv
 
 cs: ## Check the code for code style issues ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/phpcs --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml
-
-rector-upgrade: ## Upgrade any automatically upgradable old code ###
-	$(DOCKER_RUN) vendor/bin/rector -c ./etc/qa/rector.php
 
 stan: ## Run static analysis (PHPStan) ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/phpstan analyse etc src tests --level max --ansi -c ./etc/qa/phpstan.neon
