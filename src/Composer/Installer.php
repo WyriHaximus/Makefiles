@@ -107,7 +107,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
     private static function generateMakefile(IOInterface $io, string $rootPackagePath, bool $selfRoot): void
     {
         $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
-        $referenceRoot    = $rootPackagePath . ($selfRoot === true ? '' : 'vendor' . DIRECTORY_SEPARATOR . 'wyrihaximus' . DIRECTORY_SEPARATOR . 'makefiles' . DIRECTORY_SEPARATOR);
+        $referenceRoot    = $rootPackagePath . ($selfRoot ? '' : 'vendor' . DIRECTORY_SEPARATOR . 'wyrihaximus' . DIRECTORY_SEPARATOR . 'makefiles' . DIRECTORY_SEPARATOR);
         $makefileContents = file_get_contents($referenceRoot . 'templates' . DIRECTORY_SEPARATOR . 'Makefile.PHP');
 
         if (! is_string($makefileContents)) {
