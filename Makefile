@@ -41,6 +41,9 @@ all: ## Runs everything ####
 syntax-php: ## Lint PHP syntax ##*LH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
+rector-upgrade: ## Upgrade any automatically upgradable old code ###
+	$(DOCKER_RUN) vendor/bin/rector -c ./etc/qa/rector.php
+
 cs-fix: ## Fix any automatically fixable code style issues ###
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml -vvvv
 
@@ -48,7 +51,7 @@ cs: ## Check the code for code style issues ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/phpcs --parallel=$(THREADS) --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml
 
 stan: ## Run static analysis (PHPStan) ##*LCH*##
-	$(DOCKER_RUN) vendor/bin/phpstan analyse src tests --level max --ansi -c ./etc/qa/phpstan.neon
+	$(DOCKER_RUN) vendor/bin/phpstan analyse etc src tests --level max --ansi -c ./etc/qa/phpstan.neon
 
 unit-testing: ## Run tests ##*A*##
 	$(DOCKER_RUN) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml
