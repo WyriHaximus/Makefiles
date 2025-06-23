@@ -26,6 +26,7 @@ else
 		-v "`pwd`:`pwd`" \
 		-v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" \
 		-w "`pwd`" \
+		-e OTEL_PHP_FIBERS_ENABLED="true" \
 		"${CONTAINER_NAME}"
 endif
 
