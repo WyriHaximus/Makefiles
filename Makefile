@@ -40,13 +40,16 @@ endif
 all: ## Runs everything ####
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -v "####" | awk 'BEGIN {FS = ":.*?## "}; {printf "%s\n", $$1}' | xargs -o $(MAKE)
 
-syntax-php: ## Lint PHP syntax ##*LH*##
+on-install-or-update: ## Runs everything ####
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E "##\*(I|ILH)\*##" | grep -v "###" | awk 'BEGIN {FS = ":.*?## "}; {printf "%s\n", $$1}' | xargs -o $(MAKE)
+
+syntax-php: ## Lint PHP syntax ##*ILH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
-rector-upgrade: ## Upgrade any automatically upgradable old code ###
+rector-upgrade: ## Upgrade any automatically upgradable old code ##*I*##
 	$(DOCKER_RUN) vendor/bin/rector -c ./etc/qa/rector.php
 
-cs-fix: ## Fix any automatically fixable code style issues ###
+cs-fix: ## Fix any automatically fixable code style issues ##*I*##
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml -vvvv
 
 cs: ## Check the code for code style issues ##*LCH*##

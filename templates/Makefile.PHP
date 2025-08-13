@@ -38,6 +38,7 @@ else
 endif
 
 include includes/All.mk
+include includes/OnInstallUpdate.mk
 include includes/PHP.mk
 include includes/Shell.mk
 include includes/EXTRA.mk

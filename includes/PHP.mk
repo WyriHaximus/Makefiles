@@ -1,10 +1,10 @@
-syntax-php: ## Lint PHP syntax ##*LH*##
+syntax-php: ## Lint PHP syntax ##*ILH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
-rector-upgrade: ## Upgrade any automatically upgradable old code ###
+rector-upgrade: ## Upgrade any automatically upgradable old code ##*I*##
 	$(DOCKER_RUN) vendor/bin/rector -c ./etc/qa/rector.php
 
-cs-fix: ## Fix any automatically fixable code style issues ###
+cs-fix: ## Fix any automatically fixable code style issues ##*I*##
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml -vvvv
 
 cs: ## Check the code for code style issues ##*LCH*##
