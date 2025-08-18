@@ -1,6 +1,6 @@
 {
   "name": "wyrihaximus/makefiles",
-  "description": "\ud83d\udee0\ufe0f Test utilities for api-clients packages",
+  "description": "\ud83e\uddf1 Makefile building blocks",
   "license": "MIT",
   "type": "composer-plugin",
   "authors": [
