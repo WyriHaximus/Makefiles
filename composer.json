@@ -10,8 +10,8 @@
     }
   ],
   "require": {
-    "php": "^8.3",
-    "ext-json": "^8.3",
+    "php": "^8.4",
+    "ext-json": "^8.4",
     "composer-plugin-api": "^2"
   },
   "require-dev": {
@@ -39,7 +39,7 @@
       "phpstan/extension-installer": true
     },
     "platform": {
-      "php": "8.3.13"
+      "php": "8.4.13"
     },
     "sort-packages": true
   },
