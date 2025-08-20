@@ -17,6 +17,9 @@
   "require-dev": {
     "wyrihaximus/test-utilities": "^8.2.0"
   },
+  "conflict": {
+    "infection/infection": "<0.31.2"
+  },
   "autoload": {
     "psr-4": {
       "WyriHaximus\\Makefiles\\": "src"
