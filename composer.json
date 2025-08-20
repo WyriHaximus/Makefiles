@@ -15,7 +15,7 @@
     "composer-plugin-api": "^2"
   },
   "require-dev": {
-    "wyrihaximus/test-utilities": "^7.5.2"
+    "wyrihaximus/test-utilities": "^8.0.0"
   },
   "autoload": {
     "psr-4": {
@@ -36,7 +36,8 @@
       "icanhazstring/composer-unused": true,
       "infection/extension-installer": true,
       "mindplay/composer-locator": true,
-      "phpstan/extension-installer": true
+      "phpstan/extension-installer": true,
+      "wyrihaximus/test-utilities": true
     },
     "platform": {
       "php": "8.4.13"
