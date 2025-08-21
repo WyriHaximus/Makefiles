@@ -15,7 +15,7 @@
     "composer-plugin-api": "^2"
   },
   "require-dev": {
-    "wyrihaximus/test-utilities": "^8.0.0"
+    "wyrihaximus/test-utilities": "^8.1.0"
   },
   "autoload": {
     "psr-4": {
