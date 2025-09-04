@@ -118,3 +118,11 @@ task-list-ci-locked: ## CI: Generate a JSON array of jobs to run against the loc
 task-list-ci-high: ## CI: Generate a JSON array of jobs to run against the highest dependencies on the primary threading target
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E "##\*(H|LH|LCH|LC)\*##" | grep -v "###" | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%s\n", $$1}' | jq --raw-input --slurp -c 'split("\n")| .[0:-1]'
 
+
+## Temporary set of migrations to get all my repos in shape
+php-migrations-move-infection: #### Move infection.json.dist to etc/qa/infection.json5 ##*I*##
+	($(DOCKER_RUN) mv infection.json.dist etc/qa/infection.json5 || true)
+
+php-migrations-remove-phpunit-config-dir-from-infection: #### Drop XXX from etc/qa/infection.json5 ##*I*##
+	($(DOCKER_RUN) php -r '$$infectionFile = "etc/qa/infection.json5"; if (!file_exists($$infectionFile)) {exit;} $$json = json_decode(file_get_contents($$infectionFile), true); if (!is_array($$json)) {exit;}  if (!array_key_exists("phpUnit", $$json)) {exit;} unset($$json["phpUnit"]); file_put_contents($$infectionFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
+
