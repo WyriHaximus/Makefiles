@@ -42,7 +42,6 @@ all: ## Runs everything ####
 
 on-install-or-update: ## Runs everything ####
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E "##\*(I|ILH)\*##" | awk 'BEGIN {FS = ":.*?## "}; {printf "%s\n", $$1}' | xargs -o $(MAKE)
-	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E "##\*(I|ILH)\*##" | awk 'BEGIN {FS = ":.*?## "}; {printf "%s\n", $$1}' | xargs -o $(MAKE)
 
 syntax-php: ## Lint PHP syntax ##*ILH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
