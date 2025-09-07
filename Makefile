@@ -3,7 +3,7 @@ SHELL=bash
 
 .PHONY: *
 
-DOCKER_AVAILABLE=$((command -v docker >/dev/null 2>&1; echo $$?)
+DOCKER_AVAILABLE=$(shell ((command -v docker >/dev/null 2>&1) && echo 0 || echo 1))
 CONTAINER_REGISTRY_REPO="ghcr.io/wyrihaximusnet/php"
 COMPOSER_SHOW_EXTENSION_LIST_PROD=$(shell (((command -v composer >/dev/null 2>&1) && composer show -t --no-plugins) || docker run --rm -v "`pwd`:`pwd`" -w `pwd` ${CONTAINER_REGISTRY_REPO}:8.4-nts-alpine-slim-dev composer show -t --no-plugins) | grep -o "\-\-\(ext-\).\+" | sort | uniq | cut -d- -f4- | tr -d '\n' | grep . | sed  '/^$$/d' | xargs | sed -e 's/ /, /g' | tr -cd '[:alnum:],' | sed 's/.$$//')
 COMPOSER_SHOW_EXTENSION_LIST_DEV=$(shell (((command -v composer >/dev/null 2>&1) && composer show -s --no-plugins) || docker run --rm -v "`pwd`:`pwd`" -w `pwd` ${CONTAINER_REGISTRY_REPO}:8.4-nts-alpine-slim-dev composer show -s --no-plugins) | grep -o "\(ext-\).\+" | sort | uniq | cut -d- -f2- | cut -d" " -f1 | xargs | sed -e 's/ /, /g' | tr -cd '[:alnum:],')
@@ -24,7 +24,7 @@ endif
 ifeq ("$(IN_DOCKER)","TRUE")
 	DOCKER_RUN:=
 else
-    ifeq ($(C_EXIT_STATUS),0)
+    ifeq ($(DOCKER_AVAILABLE),0)
         DOCKER_RUN:=docker run --rm -it \
             -v "`pwd`:`pwd`" \
             -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" \
