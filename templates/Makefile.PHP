@@ -52,3 +52,4 @@ include includes/TaskFinders.mk
 
 ## Temporary set of migrations to get all my repos in shape
 include includes/PHP.Migrations.mk
+include includes/GitHubActions.Migrations.mk
