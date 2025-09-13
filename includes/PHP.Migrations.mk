@@ -1,3 +1,6 @@
+migrations-php-remove-psalm-xml-config: #### Make sure we remove etc/qa/psalm.xml ##*I*##
+	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
+
 migrations-php-move-infection: #### Move infection.json.dist to etc/qa/infection.json5 ##*I*##
 	($(DOCKER_RUN) mv infection.json.dist etc/qa/infection.json5 || true)
 

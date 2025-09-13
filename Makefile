@@ -125,6 +125,9 @@ task-list-ci-high: ## CI: Generate a JSON array of jobs to run against the highe
 
 
 ## Temporary set of migrations to get all my repos in shape
+migrations-php-remove-psalm-xml-config: #### Make sure we remove etc/qa/psalm.xml ##*I*##
+	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
+
 migrations-php-move-infection: #### Move infection.json.dist to etc/qa/infection.json5 ##*I*##
 	($(DOCKER_RUN) mv infection.json.dist etc/qa/infection.json5 || true)
 
