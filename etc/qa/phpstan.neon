@@ -1,9 +1,9 @@
 parameters:
+	level: max
 	paths:
 		- ../../etc
 		- ../../src
 		- ../../tests
-	level: max
 	ergebnis:
 		noExtends:
 			classesAllowedToBeExtended:
