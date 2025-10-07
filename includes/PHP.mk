@@ -15,7 +15,7 @@ cs: ## Check the code for code style issues ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/phpcs --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml
 
 stan: ## Run static analysis (PHPStan) ##*LCH*##
-	$(DOCKER_RUN) vendor/bin/phpstan analyse --level max --ansi -c ./etc/qa/phpstan.neon
+	$(DOCKER_RUN) vendor/bin/phpstan analyse --ansi -c ./etc/qa/phpstan.neon
 
 unit-testing: ## Run tests ##*A*##
 	$(DOCKER_RUN) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml
