@@ -42,16 +42,19 @@ else
     THREADS=$(shell nproc)
 endif
 
+## Run everything extra point
 include includes/All.mk
-include includes/OnInstallUpdate.mk
-include includes/PHP.mk
-include includes/Shell.mk
-include includes/EXTRA.mk
-include includes/Help.mk
-include includes/TaskFinders.mk
 
 ## Temporary set of migrations to get all my repos in shape
 include includes/PHP.Migrations.mk
 include includes/GitHub.Migrations.mk
 include includes/GitHub.Actions.Migrations.mk
 include includes/Renovate.Migrations.mk
+
+## Our default jobs
+include includes/OnInstallUpdate.mk
+include includes/PHP.mk
+include includes/Shell.mk
+include includes/EXTRA.mk
+include includes/Help.mk
+include includes/TaskFinders.mk
