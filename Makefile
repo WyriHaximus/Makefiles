@@ -63,7 +63,6 @@ migrations-php-remove-psalm-xml-config: #### Make sure we remove etc/qa/psalm.xm
 	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
 
 migrations-php-ensure-etc-ci-markdown-link-checker-json-exists: #### Make sure we have etc/ci/markdown-link-checker.json ##*I*##
-	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
 	($(DOCKER_RUN) php -r '$$markdownLinkCheckerFile = "etc/ci/markdown-link-checker.json"; $$json = json_decode("{\"httpHeaders\": [{\"urls\": [\"https://docs.github.com/\"],\"headers\": {\"Accept-Encoding\": \"zstd, br, gzip, deflate\"}}]}"); if (file_exists($$markdownLinkCheckerFile)) {exit;} file_put_contents($$markdownLinkCheckerFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
 
 migrations-php-move-infection: #### Move infection.json.dist to etc/qa/infection.json5 ##*I*##
@@ -107,6 +106,9 @@ migrations-php-set-rector-create-config-if-not-exists: #### Create Rector config
 
 migrations-php-composer-unused-create-config-if-not-exists: #### Create Composer Unused config file if it doesn't exists at etc/qa/composer-unused.php ##*I*##
 	($(DOCKER_RUN) php -r '$$composerUnusedConfigFile = "etc/qa/composer-unused.php"; $$composerUnusedConfig = "<?php declare(strict_types=1); use ComposerUnused\ComposerUnused\Configuration\Configuration; return static function (Configuration \$$config): Configuration {return \$$config;};"; if (file_exists($$composerUnusedConfigFile)) {exit;} file_put_contents($$composerUnusedConfigFile, $$composerUnusedConfig);' || true)
+
+migrations-php-composer-unused-drop-commented-out-line-scattered-across-my-repos: #### Update Composer Unused config file dropping a commented out line that is scattered cross my repos ##*I*##
+	($(DOCKER_RUN) php -r '$$composerUnusedConfigFile = "etc/qa/composer-unused.php"; if (!file_exists($$composerUnusedConfigFile)) {exit;} $$php = file_get_contents($$composerUnusedConfigFile); if (!is_string($$php)) {exit;} $$php = str_replace(base64_decode("Ly8gICAgICAgIC0+YWRkTmFtZWRGaWx0ZXIoTmFtZWRGaWx0ZXI6OmZyb21TdHJpbmcoJ3d5cmloYXhpbXVzL3BocHN0YW4tcnVsZXMtd3JhcHBlcicpKTs="), "", $$php); file_put_contents($$composerUnusedConfigFile, $$php);' || true)
 
 migrations-php-make-sure-etc-is-ran-through-phpcs: #### Make sure PHPCS runs through etc ##*I*##
 	($(DOCKER_RUN) php -r '$$phpcsConfigFile = "etc/qa/phpcs.xml"; if (!file_exists($$phpcsConfigFile)) {exit;} $$xml = file_get_contents($$phpcsConfigFile); if (!is_string($$xml)) {exit;} if (strpos($$xml, "<file>../../etc</file>") !== false) {exit;} $$xml = str_replace("<file>../../src</file>", "<file>../../etc</file>\n    <file>../../src</file>", $$xml); file_put_contents($$phpcsConfigFile, $$xml);' || true)
