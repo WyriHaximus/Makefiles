@@ -50,6 +50,15 @@ all-raw: ## The real runs everything, but due to sponge it has to be ran inside 
 
 
 ## Temporary set of migrations to get all my repos in shape
+migrations-php-make-sure-etc-exists: #### Make sure etc/ exists ##*I*##
+	($(DOCKER_RUN) mkdir etc || true)
+
+migrations-php-make-sure-etc-ci-exists: #### Make sure etc/ci/ exists ##*I*##
+	($(DOCKER_RUN) mkdir etc/ci || true)
+
+migrations-php-make-sure-etc-qa-exists: #### Make sure etc/qa/ exists ##*I*##
+	($(DOCKER_RUN) mkdir etc/qa || true)
+
 migrations-php-remove-psalm-xml-config: #### Make sure we remove etc/qa/psalm.xml ##*I*##
 	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
 
