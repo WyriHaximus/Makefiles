@@ -16,31 +16,6 @@
     "minCoveredMsi": 100,
     "ignoreMsiWithNoMutations": true,
     "mutators": {
-        "@default": true,
-        "ArrayItemRemoval": false,
-        "CastString": false,
-        "Concat": false,
-        "ConcatOperandRemoval": false,
-        "Throw_": false,
-        "Identical": false,
-        "MethodCallRemoval": false,
-        "Continue_": false,
-        "FunctionCallRemoval": false,
-        "InstanceOf_": false,
-        "Minus": false,
-        "RoundingFamily": false,
-        "ArrayOneItem": false,
-        "Foreach_": false,
-        "LogicalOr": false,
-        "UnwrapRtrim": false,
-        "LogicalNot": false,
-        "NotIdentical": false,
-        "IfNegation": false,
-        "IncrementInteger": false,
-        "DecrementInteger": false,
-        "PublicVisibility": false,
-        "ProtectedVisibility": false,
-        "LogicalOrSingleSubExprNegation": false,
-        "FalseValue": false
+        "@default": true
     }
 }
