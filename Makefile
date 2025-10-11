@@ -62,6 +62,10 @@ migrations-php-make-sure-etc-qa-exists: #### Make sure etc/qa/ exists ##*I*##
 migrations-php-remove-psalm-xml-config: #### Make sure we remove etc/qa/psalm.xml ##*I*##
 	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
 
+migrations-php-ensure-etc-ci-markdown-link-checker-json-exists: #### Make sure we have etc/ci/markdown-link-checker.json ##*I*##
+	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
+	($(DOCKER_RUN) php -r '$$markdownLinkCheckerFile = "etc/ci/markdown-link-checker.json"; $$json = json_decode("{\"httpHeaders\": [{\"urls\": [\"https://docs.github.com/\"],\"headers\": {\"Accept-Encoding\": \"zstd, br, gzip, deflate\"}}]}"); if (file_exists($$markdownLinkCheckerFile)) {exit;} file_put_contents($$markdownLinkCheckerFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
+
 migrations-php-move-infection: #### Move infection.json.dist to etc/qa/infection.json5 ##*I*##
 	($(DOCKER_RUN) mv infection.json.dist etc/qa/infection.json5 || true)
 
