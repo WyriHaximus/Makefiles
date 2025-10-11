@@ -1,3 +1,7 @@
+migrations-renovate-remove-dependabot-config: #### Make sure we remove .github/dependabot.yml ##*I*##
+	($(DOCKER_RUN) rm .github/dependabot.yml || true)
+	($(DOCKER_RUN) rm .github/dependabot.yaml || true)
+
 migrations-renovate-move-config: #### Move renovate.json to .github/renovate.json ##*I*##
 	($(DOCKER_RUN) mv renovate.json .github/renovate.json || true)
 

@@ -107,6 +107,10 @@ migrations-github-actions-move-release-management: #### Move .github/workflows/r
 migrations-github-actions-fix-management-in-release-management-referenced-workflow-file: #### Fix management in release-management referenced workflow file ##*I*##
 	($(DOCKER_RUN) sed -i -e 's/release-managment.yaml/release-management.yaml/g' .github/workflows/release-management.yaml || true)
 
+migrations-renovate-remove-dependabot-config: #### Make sure we remove .github/dependabot.yml ##*I*##
+	($(DOCKER_RUN) rm .github/dependabot.yml || true)
+	($(DOCKER_RUN) rm .github/dependabot.yaml || true)
+
 migrations-renovate-move-config: #### Move renovate.json to .github/renovate.json ##*I*##
 	($(DOCKER_RUN) mv renovate.json .github/renovate.json || true)
 
