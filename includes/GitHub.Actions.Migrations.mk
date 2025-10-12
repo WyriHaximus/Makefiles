@@ -1,3 +1,6 @@
+migrations-github-actions-move-ci: #### Move .github/workflows/ci.yml to .github/workflows/ci.yaml ##*I*##
+	($(DOCKER_RUN) mv .github/workflows/ci.yml .github/workflows/ci.yaml || true)
+
 migrations-github-actions-move-release-management: #### Move .github/workflows/release-managment.yaml to .github/workflows/release-management.yaml ##*I*##
 	($(DOCKER_RUN) mv .github/workflows/release-managment.yaml .github/workflows/release-management.yaml || true)
 
