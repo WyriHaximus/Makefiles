@@ -7,6 +7,9 @@ migrations-php-make-sure-etc-ci-exists: #### Make sure etc/ci/ exists ##*I*##
 migrations-php-make-sure-etc-qa-exists: #### Make sure etc/qa/ exists ##*I*##
 	($(DOCKER_RUN) mkdir etc/qa || true)
 
+migrations-php-move-psalm-xml-config-to-etc: #### Move psalm.xml to etc/qa/psalm.xml ##*I*##
+	($(DOCKER_RUN) mv psalm.xml etc/qa/psalm.xml || true)
+
 migrations-php-remove-psalm-xml-config: #### Make sure we remove etc/qa/psalm.xml ##*I*##
 	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
 

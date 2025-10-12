@@ -59,6 +59,9 @@ migrations-php-make-sure-etc-ci-exists: #### Make sure etc/ci/ exists ##*I*##
 migrations-php-make-sure-etc-qa-exists: #### Make sure etc/qa/ exists ##*I*##
 	($(DOCKER_RUN) mkdir etc/qa || true)
 
+migrations-php-move-psalm-xml-config-to-etc: #### Move psalm.xml to etc/qa/psalm.xml ##*I*##
+	($(DOCKER_RUN) mv psalm.xml etc/qa/psalm.xml || true)
+
 migrations-php-remove-psalm-xml-config: #### Make sure we remove etc/qa/psalm.xml ##*I*##
 	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
 
@@ -146,7 +149,7 @@ migrations-github-actions-remove-set-milestone-on-pr: #### Remove set-milestone-
 migrations-github-actions-move-ci: #### Move .github/workflows/ci.yml to .github/workflows/ci.yaml ##*I*##
 	($(DOCKER_RUN) mv .github/workflows/ci.yml .github/workflows/ci.yaml || true)
 
-migrations-github-actions-remove-ci-if-its-old-style-php-ci-workflow: #### Create CI Workflow if it doesn't exists at .github/workflows/ci.yaml ##*I*##
+migrations-github-actions-remove-ci-if-its-old-style-php-ci-workflow: #### Remove CI Workflow if its the old style PHP CI Workflow ##*I*##
 	($(DOCKER_RUN) php -r '$$ciWorkflowFile = ".github/workflows/ci.yaml"; if (!file_exists($$ciWorkflowFile)) {exit;} $$yaml = file_get_contents($$ciWorkflowFile); if (strpos($$ciWorkflowFile, "composer: [lowest, locked, highest]") !== false && strpos($$ciWorkflowFile, "- run: make ${{ matrix.check }}") !== false) { unlink($$ciWorkflowFile); }' || true)
 
 migrations-github-actions-create-ci-if-not-exists: #### Create CI Workflow if it doesn't exists at .github/workflows/ci.yaml ##*I*##
