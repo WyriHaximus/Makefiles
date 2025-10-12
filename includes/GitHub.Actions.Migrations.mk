@@ -1,3 +1,6 @@
+migrations-github-actions-remove-composer-diff: #### Remove composer-diff.yaml it has been folded into centralized workflows through ci.yaml ##*I*##
+	($(DOCKER_RUN) rm .github/workflows/composer-diff.yaml || true)
+
 migrations-github-actions-move-ci: #### Move .github/workflows/ci.yml to .github/workflows/ci.yaml ##*I*##
 	($(DOCKER_RUN) mv .github/workflows/ci.yml .github/workflows/ci.yaml || true)
 

@@ -131,6 +131,9 @@ migrations-php-composer-require-checker-create-config-if-not-exists: #### Create
 migrations-github-codeowners: #### Ensure a CODEOWNERS file is present, create only if it doesn't exist yet ##*I*##
 	($(DOCKER_RUN) php -r '$$codeOwnersFile = ".github/CODEOWNERS"; if (file_exists($$codeOwnersFile)) {exit;} file_put_contents($$codeOwnersFile, "*       @WyriHaximus" . PHP_EOL);' || true)
 
+migrations-github-actions-remove-composer-diff: #### Remove composer-diff.yaml it has been folded into centralized workflows through ci.yaml ##*I*##
+	($(DOCKER_RUN) rm .github/workflows/composer-diff.yaml || true)
+
 migrations-github-actions-move-ci: #### Move .github/workflows/ci.yml to .github/workflows/ci.yaml ##*I*##
 	($(DOCKER_RUN) mv .github/workflows/ci.yml .github/workflows/ci.yaml || true)
 
