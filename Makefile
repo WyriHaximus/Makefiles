@@ -140,6 +140,9 @@ migrations-github-actions-remove-markdown-check-links: #### Remove markdown-chec
 migrations-github-actions-remove-markdown-craft-release: #### Remove craft-release.yaml it has been folded into centralized workflows through release-management.yaml ##*I*##
 	($(DOCKER_RUN) rm .github/workflows/craft-release.yaml || true)
 
+migrations-github-actions-remove-set-milestone-on-pr: #### Remove set-milestone-on-pr.yaml it has been folded into centralized workflows through release-management.yaml ##*I*##
+	($(DOCKER_RUN) rm .github/workflows/set-milestone-on-pr.yaml || true)
+
 migrations-github-actions-move-ci: #### Move .github/workflows/ci.yml to .github/workflows/ci.yaml ##*I*##
 	($(DOCKER_RUN) mv .github/workflows/ci.yml .github/workflows/ci.yaml || true)
 
