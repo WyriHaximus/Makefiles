@@ -52,9 +52,9 @@ include includes/GitHub.Actions.Migrations.mk
 include includes/Renovate.Migrations.mk
 
 ## Our default jobs
+include includes/EXTRA.mk
 include includes/OnInstallUpdate.mk
 include includes/PHP.mk
 include includes/Shell.mk
-include includes/EXTRA.mk
 include includes/Help.mk
 include includes/TaskFinders.mk
