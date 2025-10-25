@@ -15,7 +15,7 @@
     "composer-plugin-api": "^2"
   },
   "require-dev": {
-    "wyrihaximus/test-utilities": "^8.5.0"
+    "wyrihaximus/test-utilities": "^8.6.0"
   },
   "conflict": {
     "infection/infection": "<0.31.3"
