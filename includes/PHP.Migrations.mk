@@ -25,9 +25,6 @@ migrations-php-remove-old-phpunit-xml-dist-config: #### Make sure we remove phpu
 migrations-php-ensure-etc-ci-markdown-link-checker-json-exists: #### Make sure we have etc/ci/markdown-link-checker.json ##*I*##
 	($(DOCKER_RUN) php -r '$$markdownLinkCheckerFile = "etc/ci/markdown-link-checker.json"; $$json = json_decode("{\"httpHeaders\": [{\"urls\": [\"https://docs.github.com/\"],\"headers\": {\"Accept-Encoding\": \"zstd, br, gzip, deflate\"}}]}"); if (file_exists($$markdownLinkCheckerFile)) {exit;} file_put_contents($$markdownLinkCheckerFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
 
-migrations-php-move-infection: #### Move infection.json.dist to etc/qa/infection.json5 ##*I*##
-	($(DOCKER_RUN) mv infection.json.dist etc/qa/infection.json5 || true)
-
 migrations-php-infection-create-config-if-not-exists: #### Create Infection config file if it doesn't exists at etc/qa/infection.json5 ##*I*##
 	($(DOCKER_RUN) php -r '$$infectionFile = "etc/qa/infection.json5"; $$infectionConfig = base64_decode("ewogICAgInRpbWVvdXQiOiAxMjAsCiAgICAic291cmNlIjogewogICAgICAgICJkaXJlY3RvcmllcyI6IFsKICAgICAgICAgICAgInNyYyIKICAgICAgICBdCiAgICB9LAogICAgImxvZ3MiOiB7CiAgICAgICAgInRleHQiOiAiLi4vLi4vdmFyL2luZmVjdGlvbi5sb2ciLAogICAgICAgICJzdW1tYXJ5IjogIi4uLy4uL3Zhci9pbmZlY3Rpb24tc3VtbWFyeS5sb2ciLAogICAgICAgICJqc29uIjogIi4uLy4uL3Zhci9pbmZlY3Rpb24uanNvbiIsCiAgICAgICAgInBlck11dGF0b3IiOiAiLi4vLi4vdmFyL2luZmVjdGlvbi1wZXItbXV0YXRvci5tZCIsCiAgICAgICAgImdpdGh1YiI6IHRydWUKICAgIH0sCiAgICAibWluTXNpIjogMTAwLAogICAgIm1pbkNvdmVyZWRNc2kiOiAxMDAsCiAgICAiaWdub3JlTXNpV2l0aE5vTXV0YXRpb25zIjogdHJ1ZSwKICAgICJtdXRhdG9ycyI6IHsKICAgICAgICAiQGRlZmF1bHQiOiB0cnVlCiAgICB9Cn0K"); if (file_exists($$infectionFile)) {exit;} file_put_contents($$infectionFile, $$infectionConfig);' || true)
 
@@ -45,6 +42,9 @@ migrations-php-set-phpunit-ensure-config-file-exists: #### Make sure we have a P
 
 migrations-php-set-phpunit-xsd-path-to-local: #### Ensure that the PHPUnit XDS referred in etc/qa/phpunit.xml points to vendor/phpunit/phpunit/phpunit.xsd so we don't go over the network ##*I*##
 	($(DOCKER_RUN) php -r '$$phpUnitConfigFIle = "etc/qa/phpunit.xml"; if (!file_exists($$phpUnitConfigFIle)) {exit;} $$xml = file_get_contents($$phpUnitConfigFIle); if (!is_string($$xml)) {exit;} for ($$major = 0; $$major < 23; $$major++) { for ($$minor = 0; $$minor < 23; $$minor++) { $$xml = str_replace("https://schema.phpunit.de/" . $$major . "." . $$minor . "/phpunit.xsd", "../../vendor/phpunit/phpunit/phpunit.xsd", $$xml); } } file_put_contents($$phpUnitConfigFIle, $$xml);' || true)
+
+migrations-php-move-phpstan: #### Move phpstan.neon to etc/qa/phpstan.neon ##*I*##
+	($(DOCKER_RUN) mv phpstan.neon etc/qa/phpstan.neon || true)
 
 migrations-php-set-phpstan-ensure-config-file-exists: #### Make sure we have a PHPStan config file at etc/qa/phpstan.neon ##*I*##
 	($(DOCKER_RUN) php -r '$$phpStanConfigFIle = "etc/qa/phpstan.neon"; if (file_exists($$phpStanConfigFIle)) {exit;} file_put_contents($$phpStanConfigFIle, "#parameters:");' || true)
