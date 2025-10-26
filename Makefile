@@ -50,6 +50,9 @@ all-raw: ## The real runs everything, but due to sponge it has to be ran inside 
 
 
 ## Temporary set of migrations to get all my repos in shape
+migrations-php-make-sure-var-exists: #### Make sure var/ exists ##*I*##
+	($(DOCKER_RUN) mkdir var || true)
+
 migrations-php-make-sure-etc-exists: #### Make sure etc/ exists ##*I*##
 	($(DOCKER_RUN) mkdir etc || true)
 
