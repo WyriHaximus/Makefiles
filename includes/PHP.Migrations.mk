@@ -1,6 +1,9 @@
 migrations-php-make-sure-var-exists: #### Make sure var/ exists ##*I*##
 	($(DOCKER_RUN) mkdir var || true)
 
+migrations-php-make-sure-var-gitkeep-exists: #### Make sure var/.gitkeep exists ##*I*##
+	($(DOCKER_RUN) touch var/.gitkeep || true)
+
 migrations-php-make-sure-etc-exists: #### Make sure etc/ exists ##*I*##
 	($(DOCKER_RUN) mkdir etc || true)
 
