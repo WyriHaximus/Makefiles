@@ -1,3 +1,6 @@
+migrations-php-make-sure-github-workflows-exists: #### Make sure .github/workflows exists ##*I*##
+	($(DOCKER_RUN) mkdir .github/workflows || true)
+
 migrations-github-actions-remove-composer-diff: #### Remove composer-diff.yaml it has been folded into centralized workflows through ci.yaml ##*I*##
 	($(DOCKER_RUN) rm .github/workflows/composer-diff.yaml || true)
 

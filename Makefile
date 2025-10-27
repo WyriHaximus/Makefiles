@@ -191,6 +191,9 @@ migrations-php-make-sure-github-exists: #### Make sure .github/ exists ##*I*##
 migrations-github-codeowners: #### Ensure a CODEOWNERS file is present, create only if it doesn't exist yet ##*I*##
 	($(DOCKER_RUN) php -r '$$codeOwnersFile = ".github/CODEOWNERS"; if (file_exists($$codeOwnersFile)) {exit;} file_put_contents($$codeOwnersFile, "*       @WyriHaximus" . PHP_EOL);' || true)
 
+migrations-php-make-sure-github-workflows-exists: #### Make sure .github/workflows exists ##*I*##
+	($(DOCKER_RUN) mkdir .github/workflows || true)
+
 migrations-github-actions-remove-composer-diff: #### Remove composer-diff.yaml it has been folded into centralized workflows through ci.yaml ##*I*##
 	($(DOCKER_RUN) rm .github/workflows/composer-diff.yaml || true)
 
