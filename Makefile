@@ -185,6 +185,9 @@ migrations-php-make-sure-gitignore-ignores-var: #### Make sure .gitignore ignore
 migrations-php-make-sure-gitignore-excludes-var-gitkeep: #### Make sure .gitignore excludes var/.gitkeep ##*I*##
 	($(DOCKER_RUN) php -r '$$gitignoreFile = ".gitignore"; if (!file_exists($$gitignoreFile)) {exit;} $$txt = file_get_contents($$gitignoreFile); if (!is_string($$txt)) {exit;} if (strpos($$txt, "!var/.gitkeep") !== false) {exit;} file_put_contents($$gitignoreFile, "!var/.gitkeep\n", FILE_APPEND);' || true)
 
+migrations-php-make-sure-github-exists: #### Make sure .github/ exists ##*I*##
+	($(DOCKER_RUN) mkdir var || true)
+
 migrations-github-codeowners: #### Ensure a CODEOWNERS file is present, create only if it doesn't exist yet ##*I*##
 	($(DOCKER_RUN) php -r '$$codeOwnersFile = ".github/CODEOWNERS"; if (file_exists($$codeOwnersFile)) {exit;} file_put_contents($$codeOwnersFile, "*       @WyriHaximus" . PHP_EOL);' || true)
 
