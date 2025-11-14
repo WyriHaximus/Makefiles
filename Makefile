@@ -287,10 +287,10 @@ stan: ## Run static analysis (PHPStan) ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/phpstan analyse --ansi --configuration=./etc/qa/phpstan.neon
 
 unit-testing: ## Run tests ##*A*##
-	$(DOCKER_RUN) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml
+	$(DOCKER_RUN) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml $(shell $(DOCKER_RUN) php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
 
 unit-testing-raw: ## Run tests ##*D*## ####
-	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml
+	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml $(shell php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
 
 mutation-testing: ## Run mutation testing ##*LCH*##
 	$(DOCKER_RUN) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS) || (cat ./var/infection.log && false)
