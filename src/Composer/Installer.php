@@ -11,21 +11,31 @@ use Composer\Plugin\PluginInterface;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Exception;
+use RuntimeException;
 
 use function array_key_exists;
+use function count;
 use function dirname;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
+use function implode;
+use function in_array;
 use function is_array;
 use function is_string;
 use function json_decode;
+use function preg_last_error_msg;
+use function preg_match_all;
 use function preg_replace_callback;
 use function realpath;
+use function str_contains;
+use function str_replace;
 use function str_starts_with;
+use function strlen;
 
 use const DIRECTORY_SEPARATOR;
 use const PHP_INT_MIN;
+use const PREG_OFFSET_CAPTURE;
 
 final class Installer implements PluginInterface, EventSubscriberInterface
 {
@@ -127,6 +137,90 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             ),
             $makefileContents,
         );
+
+        if (! is_string($makefileContents)) {
+            throw new RuntimeException('Failed load in includes: ' . preg_last_error_msg());
+        }
+
+        $hashCountMap   = [
+            2 => [
+                'all',
+                'on-install-or-update',
+            ],
+            4 => ['on-install-or-update'],
+        ];
+        $typesToTaskMap = [
+            'A' => [
+                'all',
+                'ci-all',
+            ],
+            'D' => ['ci-dos'],
+            'I' => [
+                'all',
+                'ci-all',
+                'on-install-or-update',
+            ],
+            'L' => [
+                'all',
+                'ci-all',
+                'ci-low',
+            ],
+            'C' => [
+                'all',
+                'ci-all',
+                'ci-locked',
+            ],
+            'H' => [
+                'all',
+                'ci-all',
+                'ci-high',
+            ],
+        ];
+        $tasks          = [
+            'all' => [],
+            'ci-all' => [],
+            'ci-dos' => [],
+            'ci-low' => [],
+            'ci-locked' => [],
+            'ci-high' => [],
+            'on-install-or-update' => [],
+        ];
+
+        preg_match_all(
+            '/([A-Za-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\*\'\(\)\<\>\:.,\/\-\\\\]+\s+)+)##\*([ADILCH]+)\*##/',
+            $makefileContents,
+            $matches,
+            PREG_OFFSET_CAPTURE,
+        );
+
+        $counter = count($matches[0]);
+        for ($i = 0; $i < $counter; $i++) {
+            foreach ($typesToTaskMap as $type => $taskMap) {
+                foreach ($taskMap as $task) {
+                    if (! str_contains($matches[5][$i][0], $type)) {
+                        continue;
+                    }
+
+                    if (in_array($matches[1][$i][0], $tasks[$task], true)) {
+                        continue;
+                    }
+
+                    if (
+                        $type === 'I' &&
+                        array_key_exists(strlen($matches[2][$i][0]), $hashCountMap) &&
+                        ! in_array($task, $hashCountMap[strlen($matches[2][$i][0])], true)
+                    ) {
+                        continue;
+                    }
+
+                    $tasks[$task][] = $matches[1][$i][0];
+                }
+            }
+        }
+
+        foreach ($tasks as $taskTarget => $taskList) {
+            $makefileContents = str_replace('make-list(' . $taskTarget . ')', implode(' ', $taskList) . ' ## Count: ' . count($taskList), $makefileContents);
+        }
 
         file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
 
