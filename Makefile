@@ -327,17 +327,17 @@ help: ## Show this help ####
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -v "##U##" | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-32s\033[0m %s\n", $$1, $$2}' | tr -d '#'
 
 task-list-ci-all: ## CI: Generate a JSON array of jobs to run on all variations
-	$(MAKE) syntax-php cs stan unit-testing mutation-testing composer-require-checker composer-unused backward-compatibility-check ## Count: 8
+	@echo "[\"syntax-php\",\"cs\",\"stan\",\"unit-testing\",\"mutation-testing\",\"composer-require-checker\",\"composer-unused\",\"backward-compatibility-check\"]" ## Count: 8
 
 task-list-ci-dos: ## CI: Generate a JSON array of jobs to run Directly on the OS variations
-	$(MAKE) unit-testing-raw ## Count: 1
+	@echo "[\"unit-testing-raw\"]" ## Count: 1
 
 task-list-ci-low: ## CI: Generate a JSON array of jobs to run against the lowest dependencies on the primary threading target
-	$(MAKE) syntax-php cs stan mutation-testing ## Count: 4
+	@echo "[\"syntax-php\",\"cs\",\"stan\",\"mutation-testing\"]" ## Count: 4
 
 task-list-ci-locked: ## CI: Generate a JSON array of jobs to run against the locked dependencies on the primary threading target
-	$(MAKE) cs stan mutation-testing composer-require-checker composer-unused backward-compatibility-check ## Count: 6
+	@echo "[\"cs\",\"stan\",\"mutation-testing\",\"composer-require-checker\",\"composer-unused\",\"backward-compatibility-check\"]" ## Count: 6
 
 task-list-ci-high: ## CI: Generate a JSON array of jobs to run against the highest dependencies on the primary threading target
-	$(MAKE) syntax-php cs stan mutation-testing ## Count: 4
+	@echo "[\"syntax-php\",\"cs\",\"stan\",\"mutation-testing\"]" ## Count: 4
 

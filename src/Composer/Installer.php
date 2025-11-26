@@ -24,6 +24,8 @@ use function in_array;
 use function is_array;
 use function is_string;
 use function json_decode;
+use function json_encode;
+use function json_last_error_msg;
 use function preg_last_error_msg;
 use function preg_match_all;
 use function preg_replace_callback;
@@ -219,7 +221,13 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         }
 
         foreach ($tasks as $taskTarget => $taskList) {
-            $makefileContents = str_replace('make-list(' . $taskTarget . ')', implode(' ', $taskList) . ' ## Count: ' . count($taskList), $makefileContents);
+            $jsonTaskList = json_encode($taskList);
+            if (! is_string($jsonTaskList)) {
+                throw new RuntimeException('Failed to JSON encode task list: ' . json_last_error_msg());
+            }
+
+            $makefileContents = str_replace('make-list(' . $taskTarget . ')', '$(MAKE) ' . implode(' ', $taskList) . ' ## Count: ' . count($taskList), $makefileContents);
+            $makefileContents = str_replace('task-list(' . $taskTarget . ')', '@echo "' . str_replace('"', '\"', $jsonTaskList) . '" ## Count: ' . count($taskList), $makefileContents);
         }
 
         file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
