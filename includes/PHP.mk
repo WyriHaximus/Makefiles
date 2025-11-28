@@ -1,7 +1,7 @@
 syntax-php: ## Lint PHP syntax ##*ILH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
-composer-normalize: ## Normalize composer.json ##*I*##
+composer-normalize: #### Normalize composer.json ##*I*##
 	$(DOCKER_RUN) composer normalize
 	$(DOCKER_RUN) COMPOSER_DISABLE_NETWORK=1 composer update --lock --no-scripts || $(DOCKER_RUN) composer update --lock --no-scripts
 

@@ -46,7 +46,7 @@ endif
 all: ## Runs everything ####
 	$(DOCKER_RUN) make all-raw
 all-raw: ## The real runs everything, but due to sponge it has to be ran inside DOCKER_RUN ##U##
-	$(MAKE) syntax-php composer-normalize rector-upgrade cs-fix cs stan unit-testing mutation-testing composer-require-checker composer-unused backward-compatibility-check ## Count: 11
+	$(MAKE) syntax-php rector-upgrade cs-fix cs stan unit-testing mutation-testing composer-require-checker composer-unused backward-compatibility-check ## Count: 10
 
 
 ## Temporary set of migrations to get all my repos in shape
@@ -270,7 +270,7 @@ on-install-or-update: ## Tasks, like migrations, that specifically have be run a
 syntax-php: ## Lint PHP syntax ##*ILH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
-composer-normalize: ## Normalize composer.json ##*I*##
+composer-normalize: #### Normalize composer.json ##*I*##
 	$(DOCKER_RUN) composer normalize
 	$(DOCKER_RUN) COMPOSER_DISABLE_NETWORK=1 composer update --lock --no-scripts || $(DOCKER_RUN) composer update --lock --no-scripts
 
