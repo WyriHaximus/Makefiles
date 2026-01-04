@@ -319,6 +319,9 @@ update: ### Update dependencies ####
 outdated: ### Show outdated dependencies ####
 	$(DOCKER_RUN) composer outdated
 
+composer-show: ### Show dependencies ####
+	$(DOCKER_RUN) composer show
+
 shell: ## Provides Shell access in the expected environment ####
 	$(DOCKER_RUN) bash
 
