@@ -63,6 +63,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
     }
 
     /**
+     * @api public
      * Called before every dump autoload, generates a fresh PHP class.
      */
     public static function findEventListeners(Event $event): void
@@ -238,6 +239,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
     private static function loadInclude(IOInterface $io, string $makefilesPackageRoot, string $filename): string
     {
         $makefileIncludePath = realpath($makefilesPackageRoot . $filename);
+        /** @phpstan-ignore function.alreadyNarrowedType */
         if (! is_string($makefileIncludePath) || ! str_starts_with($makefileIncludePath, $makefileIncludePath) || ! file_exists($makefileIncludePath)) {
             return '';
         }
