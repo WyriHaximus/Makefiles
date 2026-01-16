@@ -142,6 +142,9 @@ migrations-php-phpcs-make-sure-tests-has-no-trailing-slash: #### Make sure PHPCS
 migrations-php-phpcs-make-sure-etc-is-ran-through: #### Make sure PHPCS runs through etc ##*I*##
 	($(DOCKER_RUN) php -r '$$phpcsConfigFile = "etc/qa/phpcs.xml"; if (!file_exists($$phpcsConfigFile)) {exit;} $$xml = file_get_contents($$phpcsConfigFile); if (!is_string($$xml)) {exit;} if (strpos($$xml, "<file>../../etc</file>") !== false) {exit;} $$xml = str_replace("<file>../../src</file>", "<file>../../etc</file>\n    <file>../../src</file>", $$xml); file_put_contents($$phpcsConfigFile, $$xml);' || true)
 
+migrations-phpcs-include-examples-directory-when-present: #### Make sure PHPCS runs through examples when it exists ##*I*##
+	($(DOCKER_RUN) php -r 'if (!file_exists("examples/")) {exit;} $$phpcsConfigFile = "etc/qa/phpcs.xml"; if (!file_exists($$phpcsConfigFile)) {exit;} $$xml = file_get_contents($$phpcsConfigFile); if (!is_string($$xml)) {exit;} if (strpos($$xml, "<file>../../examples</file>") !== false) {exit;} $$xml = str_replace("<file>../../etc</file>", "<file>../../etc</file>\n    <file>../../examples</file>", $$xml); file_put_contents($$phpcsConfigFile, $$xml);' || true)
+
 migrations-php-move-composer-require-checker: #### Move composer-require-checker.json to etc/qa/composer-require-checker.json ##*I*##
 	($(DOCKER_RUN) mv composer-require-checker.json etc/qa/composer-require-checker.json || true)
 
