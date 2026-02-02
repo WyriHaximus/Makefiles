@@ -334,6 +334,9 @@ backward-compatibility-check-raw: ## Check code for backwards incompatible chang
 install: ### Install dependencies ####
 	$(DOCKER_RUN) composer install
 
+composer-require: ### Require passed dependencies ####
+	$(DOCKER_RUN) composer require -W $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+
 update: ### Update dependencies ####
 	$(DOCKER_RUN) composer update -W
 
