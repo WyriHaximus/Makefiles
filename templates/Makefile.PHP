@@ -23,16 +23,19 @@ endif
 
 ifeq ("$(IN_DOCKER)","TRUE")
 	DOCKER_RUN:=
+	DOCKER_SHELL:=
 else
     ifeq ($(DOCKER_AVAILABLE),0)
-        DOCKER_RUN:=docker run --rm -it \
-            -v "`pwd`:`pwd`" \
+        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" \
             -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" \
             -w "`pwd`" \
             -e OTEL_PHP_FIBERS_ENABLED="true" \
             "${CONTAINER_NAME}"
+        DOCKER_RUN:=docker run --rm -i ${DOCKER_COMMON_OPS}
+        DOCKER_SHELL:=docker run --rm -it ${DOCKER_COMMON_OPS}
     else
         DOCKER_RUN:=
+        DOCKER_SHELL:=
     endif
 endif
 
