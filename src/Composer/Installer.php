@@ -13,9 +13,13 @@ use Composer\Script\ScriptEvents;
 use Exception;
 use RuntimeException;
 
+use function array_intersect;
 use function array_key_exists;
+use function array_keys;
+use function array_unique;
 use function count;
 use function dirname;
+use function explode;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
@@ -68,6 +72,13 @@ final class Installer implements PluginInterface, EventSubscriberInterface
      */
     public static function findEventListeners(Event $event): void
     {
+        /** @var array<string> $requiredPackagesAndExtensions */
+        $requiredPackagesAndExtensions = array_unique([
+            ...array_keys($event->getComposer()->getPackage()->getRequires()),
+            ...array_keys($event->getComposer()->getPackage()->getDevRequires()),
+        ]);
+//        var_export($requiredPackagesAndExtensions);
+//        die();
         $rootPackagePath = dirname(self::getVendorDir($event->getComposer())) . DIRECTORY_SEPARATOR;
         if (! file_exists($rootPackagePath . '/composer.json')) {
             return;
@@ -84,7 +95,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         }
 
         if (array_key_exists('name', $json) && $json['name'] === 'wyrihaximus/makefiles') {
-            self::generateMakefile($event->getIO(), $rootPackagePath, true);
+            self::generateMakefile($event->getIO(), $rootPackagePath, true, $requiredPackagesAndExtensions);
 
             return;
         }
@@ -99,7 +110,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
         foreach ($json['require-dev'] as $package => $targetVersion) {
             if ($package === 'wyrihaximus/makefiles') {
-                self::generateMakefile($event->getIO(), $rootPackagePath, false);
+                self::generateMakefile($event->getIO(), $rootPackagePath, false, $requiredPackagesAndExtensions);
 
                 return;
             }
@@ -117,7 +128,8 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         return $vendorDir;
     }
 
-    private static function generateMakefile(IOInterface $io, string $rootPackagePath, bool $selfRoot): void
+    /** @param array<string> $requiredPackagesAndExtensions */
+    private static function generateMakefile(IOInterface $io, string $rootPackagePath, bool $selfRoot, array $requiredPackagesAndExtensions): void
     {
         $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
         $referenceRoot    = $rootPackagePath . ($selfRoot ? '' : 'vendor' . DIRECTORY_SEPARATOR . 'wyrihaximus' . DIRECTORY_SEPARATOR . 'makefiles' . DIRECTORY_SEPARATOR);
@@ -229,6 +241,60 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
             $makefileContents = str_replace('make-list(' . $taskTarget . ')', '$(MAKE) ' . implode(' ', $taskList) . ' ## Count: ' . count($taskList), $makefileContents);
             $makefileContents = str_replace('task-list(' . $taskTarget . ')', '@echo "' . str_replace('"', '\"', $jsonTaskList) . '" ## Count: ' . count($taskList), $makefileContents);
+        }
+
+        preg_match_all(
+            '/([A-Z_]+)=when_in_requirements\(([A-Za-z0-9,\/\[\]\"-]+),\s+([A-Za-z0-9\"-]+),\s+([A-Za-z0-9,\"-]+)\)/',
+            $makefileContents,
+            $matchesSecondPass,
+            PREG_OFFSET_CAPTURE,
+        );
+
+        foreach ($matchesSecondPass[0] as $i => $fullLine) {
+            $makefileContents = str_replace(
+                $fullLine[0],
+                $matchesSecondPass[1][$i][0] . '=' . (count(array_intersect(
+                    /** @phpstan-ignore argument.type */
+                    json_decode($matchesSecondPass[2][$i][0], true),
+                    $requiredPackagesAndExtensions,
+                )) > 0 ? $matchesSecondPass[3][$i][0] : $matchesSecondPass[4][$i][0]),
+                $makefileContents,
+            );
+        }
+
+        preg_match_all(
+            '/([A-Z_]+)=lowest_cleaned_version_in_tree_from_file\(\"([A-Za-z0-9.-\/]+)\",\s+\"([A-Za-z0-9-.]+)\"\)/',
+            $makefileContents,
+            $matchesThirdPass,
+            PREG_OFFSET_CAPTURE,
+        );
+
+        foreach ($matchesThirdPass[0] as $i => $fullLine) {
+            $makefileContents = str_replace(
+                $fullLine[0],
+                $matchesThirdPass[1][$i][0] . '="' . (static function (string $version): string {
+                    [$major, $minor] = explode('.', $version);
+
+                    return $major . '.' . $minor;
+                })((static function (array $array, array $keys): string {
+                    $current = $array;
+                    foreach ($keys as $key) {
+                        if (! is_array($current) || ! array_key_exists($key, $current)) {
+                            return '0';
+                        }
+
+                        $current = $current[$key];
+                    }
+
+                    /** @phpstan-ignore return.type */
+                    return $current;
+                })(
+                    /** @phpstan-ignore argument.type,argument.type */
+                    json_decode(file_get_contents($rootPackagePath . $matchesThirdPass[2][$i][0]), true),
+                    explode('.', $matchesThirdPass[3][$i][0]),
+                )) . '"',
+                $makefileContents,
+            );
         }
 
         file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
