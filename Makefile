@@ -23,18 +23,24 @@ endif
 
 ifeq ("$(IN_DOCKER)","TRUE")
 	DOCKER_RUN:=
+	DOCKER_RUN_WITH_SOCKET:=
 	DOCKER_SHELL:=
 else
     ifeq ($(DOCKER_AVAILABLE),0)
-        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" \
-            -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" \
-            -w "`pwd`" \
-            -e OTEL_PHP_FIBERS_ENABLED="true" \
-            "${CONTAINER_NAME}"
-        DOCKER_RUN:=docker run --rm -i ${DOCKER_COMMON_OPS}
-        DOCKER_SHELL:=docker run --rm -it ${DOCKER_COMMON_OPS}
+        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" -e OTEL_PHP_FIBERS_ENABLED="true"
+        ifneq ("$(wildcard /var/run/docker.sock)","")
+            DOCKER_SOCKET_OPS:=-v "/var/run/docker.sock:/var/run/docker.sock"
+            DOCKER_SOCKET_CONTAINER_NAME_SUFFIX:=-root
+        else
+            DOCKER_SOCKET_OPS:=
+            DOCKER_SOCKET_CONTAINER_NAME_SUFFIX:=
+        endif
+        DOCKER_RUN:=docker run --rm -i ${DOCKER_COMMON_OPS} "${CONTAINER_NAME}"
+        DOCKER_RUN_WITH_SOCKET:=docker run --rm -i ${DOCKER_COMMON_OPS} ${DOCKER_SOCKET_OPS} "${CONTAINER_NAME}${DOCKER_SOCKET_CONTAINER_NAME_SUFFIX}"
+        DOCKER_SHELL:=docker run --rm -it ${DOCKER_COMMON_OPS} "${CONTAINER_NAME}"
     else
         DOCKER_RUN:=
+        DOCKER_RUN_WITH_SOCKET:=
         DOCKER_SHELL:=
     endif
 endif
