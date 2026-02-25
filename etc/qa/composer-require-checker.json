@@ -5,7 +5,8 @@
     "array", "string", "int", "float", "bool", "iterable", "callable", "void", "object",
     "Composer\\Composer", "Composer\\Config", "Composer\\EventDispatcher\\EventSubscriberInterface",
     "Composer\\IO\\IOInterface", "Composer\\Package\\RootPackageInterface", "Composer\\Plugin\\PluginInterface",
-    "Composer\\Script\\Event", "Composer\\Script\\ScriptEvents"
+    "Composer\\Script\\Event", "Composer\\Script\\ScriptEvents", "Composer\\Package\\Loader\\ArrayLoader",
+    "Composer\\Package\\Loader\\JsonLoader"
   ],
   "php-core-extensions" : [
     "Core",
