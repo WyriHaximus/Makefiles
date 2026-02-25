@@ -7,16 +7,23 @@ namespace WyriHaximus\Makefiles\Composer;
 use Composer\Composer;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\IO\IOInterface;
+use Composer\Package\Loader\ArrayLoader;
+use Composer\Package\Loader\JsonLoader;
 use Composer\Plugin\PluginInterface;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Exception;
+use FilesystemIterator;
+use GlobIterator;
 use RuntimeException;
+use SplFileInfo;
 
+use function array_filter;
 use function array_intersect;
 use function array_key_exists;
 use function array_keys;
 use function array_unique;
+use function assert;
 use function count;
 use function dirname;
 use function explode;
@@ -76,9 +83,9 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         $requiredPackagesAndExtensions = array_unique([
             ...array_keys($event->getComposer()->getPackage()->getRequires()),
             ...array_keys($event->getComposer()->getPackage()->getDevRequires()),
+            ...self::retrieveRequiredPackagesAndExtensions(self::getVendorDir($event->getComposer())),
         ]);
-//        var_export($requiredPackagesAndExtensions);
-//        die();
+
         $rootPackagePath = dirname(self::getVendorDir($event->getComposer())) . DIRECTORY_SEPARATOR;
         if (! file_exists($rootPackagePath . '/composer.json')) {
             return;
@@ -318,5 +325,38 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         $io->write('<info>wyrihaximus/makefiles:</info> Including: ' . $filename);
 
         return $makefileContents;
+    }
+
+    /**
+     * @param non-empty-string $vendorDir
+     *
+     * @return iterable<string>
+     */
+    private static function retrieveRequiredPackagesAndExtensions(string $vendorDir): iterable
+    {
+        $loader = new JsonLoader(new ArrayLoader());
+
+        foreach (new GlobIterator($vendorDir . '/*/*/composer.json', FilesystemIterator::KEY_AS_FILENAME | FilesystemIterator::SKIP_DOTS) as $node) {
+            assert($node instanceof SplFileInfo);
+            $composerJson = file_get_contents($node->getRealPath());
+            if ($composerJson === false) {
+                continue;
+            }
+
+            $json = json_decode($composerJson, true);
+            if (! is_array($json)) {
+                continue;
+            }
+
+            if (array_key_exists('require', $json) && is_array($json['require'])) {
+                yield from array_filter(array_keys($json['require']), is_string(...));
+            }
+
+            if (! array_key_exists('require-dev', $json) || ! is_array($json['require-dev'])) {
+                continue;
+            }
+
+            yield from array_filter(array_keys($json['require-dev']), is_string(...));
+        }
     }
 }
