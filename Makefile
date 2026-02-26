@@ -56,7 +56,7 @@ endif
 
 ## Run everything extra point
 all: ## Runs everything ####
-	$(DOCKER_SHELL) make all-raw
+	$(DOCKER_RUN_WITH_SOCKET) make all-raw
 all-raw: ## The real runs everything, but due to sponge it has to be ran inside DOCKER_RUN ##U##
 	$(MAKE) syntax-php rector-upgrade cs-fix cs stan unit-testing mutation-testing composer-require-checker composer-unused backward-compatibility-check ## Count: 10
 
