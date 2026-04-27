@@ -319,6 +319,9 @@ rector-upgrade: ## Upgrade any automatically upgradable old code ##*I*##
 cs-fix: ## Fix any automatically fixable code style issues ##*I*##
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(MAKE) cs
 
+cs-fix-debug: ## Fix any automatically fixable code style issues, but with debugging output ####
+	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml -vvvv
+
 cs: ## Check the code for code style issues ##*LCH*##
 	$(DOCKER_SHELL) vendor/bin/phpcs --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml
 
