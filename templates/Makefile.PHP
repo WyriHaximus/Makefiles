@@ -7,6 +7,7 @@ DOCKER_AVAILABLE=$(shell ((command -v docker >/dev/null 2>&1) && echo 0 || echo 
 CONTAINER_REGISTRY_REPO="ghcr.io/wyrihaximusnet/php"
 SLIM_DOCKER_IMAGE=when_in_requirements(["ext-gd","ext-vips"], "", "-slim")
 NTS_OR_ZTS_DOCKER_IMAGE=when_in_requirements(["ext-parallel"], "zts", "nts")
+OTEL_PHP_FIBERS_ENABLED=when_in_requirements(["ext-parallel"], "false", "true")
 NEEDS_DOCKER_SOCKET=when_in_requirements(["testcontainers/testcontainers"], TRUE, FALSE)
 PHP_VERSION=lowest_cleaned_version_in_tree_from_file("composer.json", "config.platform.php")
 CONTAINER_NAME=$(shell echo "${CONTAINER_REGISTRY_REPO}:${PHP_VERSION}-${NTS_OR_ZTS_DOCKER_IMAGE}-alpine${SLIM_DOCKER_IMAGE}-dev")
@@ -25,7 +26,7 @@ ifeq ("$(IN_DOCKER)","TRUE")
 	DOCKER_SHELL:=
 else
     ifeq ($(DOCKER_AVAILABLE),0)
-        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" -e OTEL_PHP_FIBERS_ENABLED="true" --ulimit nofile=1000000
+        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}"  -e OTEL_PHP_FIBERS_ENABLED="${OTEL_PHP_FIBERS_ENABLED}" --ulimit nofile=1000000
         ifeq ("$(NEEDS_DOCKER_SOCKET)","TRUE")
             ifneq ("$(wildcard /var/run/docker.sock)","")
                 DOCKER_SOCKET_OPS:=-v "/var/run/docker.sock:/var/run/docker.sock"
