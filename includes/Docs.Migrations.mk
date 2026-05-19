@@ -1,2 +1,5 @@
 migrations-docs-update-readme-copyright-year-to-current: #### Update readme copyright year to current ##*I*##
 	($(DOCKER_RUN) php -r '$$readmeFile = "README.md"; $$copyRight = "Copyright (c) "; $$currentYear = date("Y"); if (!file_exists($$readmeFile)) {exit;} $$readmeContents = file_get_contents($$readmeFile); foreach (range(2000, 2100) as $$year) { $$readmeContents = str_replace($$copyRight . $$year,  $$copyRight . $$currentYear, $$readmeContents); } file_put_contents($$readmeFile, $$readmeContents); ' || true)
+
+migrations-docs-update-license-copyright-year-to-current: #### Update license copyright year to current ##*I*##
+	($(DOCKER_RUN) php -r '$$licenseFile = "LICENSE"; $$copyRight = "Copyright (c) "; $$currentYear = date("Y"); if (!file_exists($$licenseFile)) {exit;} $$licenseContents = file_get_contents($$licenseFile); foreach (range(2000, 2100) as $$year) { $$licenseContents = str_replace($$copyRight . $$year,  $$copyRight . $$currentYear, $$licenseContents); } file_put_contents($$licenseFile, $$licenseContents); ' || true)
