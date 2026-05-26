@@ -1,3 +1,6 @@
+composer-validate: ## Ensure we don't require any package we don't use in this package directly ##*IC*##
+	$(DOCKER_SHELL) composer validate
+
 syntax-php: ## Lint PHP syntax ##*ILH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
