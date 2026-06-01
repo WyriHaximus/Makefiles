@@ -11,6 +11,7 @@ OTEL_PHP_FIBERS_ENABLED=true
 NEEDS_DOCKER_SOCKET=FALSE
 PHP_VERSION="8.4"
 CONTAINER_NAME=$(shell echo "${CONTAINER_REGISTRY_REPO}:${PHP_VERSION}-${NTS_OR_ZTS_DOCKER_IMAGE}-alpine${SLIM_DOCKER_IMAGE}-dev")
+CONTAINER_NAME_INTERACTIVE_SHELL=$(shell echo "${CONTAINER_REGISTRY_REPO}:${PHP_VERSION}-zts-alpine${SLIM_DOCKER_IMAGE}-dev")
 COMPOSER_CACHE_DIR=$(shell (command -v composer >/dev/null 2>&1) && composer config --global cache-dir -q 2>/dev/null || echo ${HOME}/.composer-php/cache)
 COMPOSER_CONTAINER_CACHE_DIR=$(shell ((command -v docker >/dev/null 2>&1) && docker run --rm -it ${CONTAINER_NAME} composer config --global cache-dir -q) || echo ${HOME}/.composer-php/cache)
 
@@ -24,6 +25,7 @@ ifeq ("$(IN_DOCKER)","TRUE")
 	DOCKER_RUN:=
 	DOCKER_RUN_WITH_SOCKET:=
 	DOCKER_SHELL:=
+	DOCKER_INTERACTIVE_SHELL:=
 else
     ifeq ($(DOCKER_AVAILABLE),0)
         DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}"  -e OTEL_PHP_FIBERS_ENABLED="${OTEL_PHP_FIBERS_ENABLED}" --ulimit nofile=1000000
@@ -42,10 +44,12 @@ else
         DOCKER_RUN:=docker run --rm -i ${DOCKER_COMMON_OPS} "${CONTAINER_NAME}"
         DOCKER_RUN_WITH_SOCKET:=docker run --rm -i ${DOCKER_COMMON_OPS} ${DOCKER_SOCKET_OPS} "${CONTAINER_NAME}${DOCKER_SOCKET_CONTAINER_NAME_SUFFIX}"
         DOCKER_SHELL:=docker run --rm -it ${DOCKER_COMMON_OPS} "${CONTAINER_NAME}"
+        DOCKER_INTERACTIVE_SHELL:=docker run --rm -it ${DOCKER_COMMON_OPS} "${CONTAINER_NAME_INTERACTIVE_SHELL}"
     else
         DOCKER_RUN:=
         DOCKER_RUN_WITH_SOCKET:=
         DOCKER_SHELL:=
+		DOCKER_INTERACTIVE_SHELL:=
     endif
 endif
 
@@ -384,7 +388,7 @@ install: ### Install dependencies ####
 	$(DOCKER_SHELL) composer install
 
 composer-require: ### Require passed dependencies ####
-	$(DOCKER_SHELL) composer require -W $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+	$(DOCKER_INTERACTIVE_SHELL) composer require -W $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
 update: ### Update dependencies ####
 	$(DOCKER_SHELL) composer update -W
@@ -399,7 +403,7 @@ composer-show: ### Show dependencies ####
 	$(DOCKER_SHELL) composer show
 
 shell: ## Provides Shell access in the expected environment ####
-	$(DOCKER_SHELL) bash
+	$(DOCKER_INTERACTIVE_SHELL) bash
 
 help: ## Show this help ####
 	@printf "\033[33mUsage:\033[0m\n  make [target]\n\n\033[33mTargets:\033[0m\n"
