@@ -54,7 +54,7 @@ install: ### Install dependencies ####
 	$(DOCKER_SHELL) composer install
 
 composer-require: ### Require passed dependencies ####
-	$(DOCKER_SHELL) composer require -W $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+	$(DOCKER_INTERACTIVE_SHELL) composer require -W $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
 update: ### Update dependencies ####
 	$(DOCKER_SHELL) composer update -W
