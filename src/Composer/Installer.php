@@ -101,8 +101,10 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             return;
         }
 
+        $supportedFeatures = self::extractSupportedFeatures($json);
+
         if (array_key_exists('name', $json) && $json['name'] === 'wyrihaximus/makefiles') {
-            self::generateMakefile($event->getIO(), $rootPackagePath, true, $requiredPackagesAndExtensions);
+            self::generateMakefile($event->getIO(), $rootPackagePath, true, $requiredPackagesAndExtensions, $supportedFeatures);
 
             return;
         }
@@ -117,7 +119,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
         foreach ($json['require-dev'] as $package => $targetVersion) {
             if ($package === 'wyrihaximus/makefiles') {
-                self::generateMakefile($event->getIO(), $rootPackagePath, false, $requiredPackagesAndExtensions);
+                self::generateMakefile($event->getIO(), $rootPackagePath, false, $requiredPackagesAndExtensions, $supportedFeatures);
 
                 return;
             }
@@ -135,8 +137,11 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         return $vendorDir;
     }
 
-    /** @param array<string> $requiredPackagesAndExtensions */
-    private static function generateMakefile(IOInterface $io, string $rootPackagePath, bool $selfRoot, array $requiredPackagesAndExtensions): void
+    /**
+     * @param array<string> $requiredPackagesAndExtensions
+     * @param array<string> $supportedFeatures
+     */
+    private static function generateMakefile(IOInterface $io, string $rootPackagePath, bool $selfRoot, array $requiredPackagesAndExtensions, array $supportedFeatures): void
     {
         $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
         $referenceRoot    = $rootPackagePath . ($selfRoot ? '' : 'vendor' . DIRECTORY_SEPARATOR . 'wyrihaximus' . DIRECTORY_SEPARATOR . 'makefiles' . DIRECTORY_SEPARATOR);
@@ -209,7 +214,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         ];
 
         preg_match_all(
-            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,\/\-\\\\]+\s+)+)##\*([ADILCH]+)\*##/',
+            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,\/\-\\\\]+\s+)+)##\*([ADILCH]+)\*(##\^([a-z-|]+)\^##)?/',
             $makefileContents,
             $matches,
             PREG_OFFSET_CAPTURE,
@@ -233,6 +238,14 @@ final class Installer implements PluginInterface, EventSubscriberInterface
                         ! in_array($task, $hashCountMap[strlen($matches[2][$i][0])], true)
                     ) {
                         continue;
+                    }
+
+                    if ($matches[7][$i][0] !== '') {
+                        foreach (explode('|', $matches[7][$i][0]) as $feature) {
+                            if (! in_array($feature, $supportedFeatures, true)) {
+                                continue 2;
+                            }
+                        }
                     }
 
                     $tasks[$task][] = $matches[1][$i][0];
@@ -304,6 +317,13 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             );
         }
 
+        $supportedFeaturesJson = json_encode($supportedFeatures);
+        if (! is_string($supportedFeaturesJson)) {
+            throw new RuntimeException('Failed to JSON encode supported features json: ' . json_last_error_msg());
+        }
+
+        $makefileContents = str_replace('supported-features(list)', '@echo "' . str_replace('"', '\"', $supportedFeaturesJson) . '" ## Count: ' . count($supportedFeatures), $makefileContents);
+
         file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
 
         $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile took less than a second');
@@ -358,5 +378,30 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
             yield from array_filter(array_keys($json['require-dev']), is_string(...));
         }
+    }
+
+    /**
+     * @param array<mixed> $json
+     *
+     * @return list<string>
+     */
+    private static function extractSupportedFeatures(array $json): array
+    {
+        /** @var array<string, bool> $supportedFeatures */
+        $supportedFeatures = SupportedFeatures::DEFAULTS;
+
+        /** @phpstan-ignore argument.type,argument.type */
+        if (array_key_exists('extra', $json) && array_key_exists('wyrihaximus', $json['extra']) && (array_key_exists('supported-features', $json['extra']['wyrihaximus']) && is_array($json['extra']['wyrihaximus']['supported-features']))) {
+            foreach ($json['extra']['wyrihaximus']['supported-features'] as $feature => $featureSupported) {
+                if (! array_key_exists($feature, SupportedFeatures::DEFAULTS)) {
+                    continue;
+                }
+
+                $supportedFeatures[$feature] = $featureSupported;
+            }
+        }
+
+        /** @phpstan-ignore argument.type */
+        return array_keys(array_filter($supportedFeatures, static fn (bool $featureSupported): bool => $featureSupported));
     }
 }

@@ -48,7 +48,12 @@
     "sort-packages": true
   },
   "extra": {
-    "class": "WyriHaximus\\Makefiles\\Composer\\Installer"
+    "class": "WyriHaximus\\Makefiles\\Composer\\Installer",
+    "wyrihaximus": {
+      "supported-features": {
+        "composer-plugin": true
+      }
+    }
   },
   "scripts": {
     "post-install-cmd": [
