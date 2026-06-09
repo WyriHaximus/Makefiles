@@ -8,40 +8,40 @@ composer-normalize: #### Normalize composer.json ##*I*##
 	$(DOCKER_RUN) composer normalize
 	$(MAKE) update-lock
 
-rector-upgrade: ## Upgrade any automatically upgradable old code ##*I*##
+rector-upgrade: ## Upgrade any automatically upgradable old code ##*I*##^code-style^##
 	$(DOCKER_RUN) vendor/bin/rector -c ./etc/qa/rector.php
 
-cs-fix: ## Fix any automatically fixable code style issues ##*I*##
+cs-fix: ## Fix any automatically fixable code style issues ##*I*##^code-style^##
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(MAKE) cs
 
-cs-fix-debug: ## Fix any automatically fixable code style issues, but with debugging output ####
+cs-fix-debug: ## Fix any automatically fixable code style issues, but with debugging output ####^code-style^##
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml -vvvv
 
-cs: ## Check the code for code style issues ##*LCH*##
+cs: ## Check the code for code style issues ##*LCH*##^code-style^##
 	$(DOCKER_SHELL) vendor/bin/phpcs --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml
 
-stan: ## Run static analysis (PHPStan) ##*LCH*##
+stan: ## Run static analysis (PHPStan) ##*LCH*##^static-analysis^##
 	$(DOCKER_SHELL) vendor/bin/phpstan analyse --ansi --configuration=./etc/qa/phpstan.neon
 
-unit-testing: ## Run tests ##*A*##
+unit-testing: ## Run tests ##*A*##^unit-tests^##
 	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml $(shell $(DOCKER_SHELL) php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
 
-unit-testing-raw: ## Run tests ##*D*## ####
+unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
 	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml $(shell php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
 
-unit-testing-filter: ## Run tests with specified filter ####
+unit-testing-filter: ## Run tests with specified filter ####^unit-tests^##
 	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always --filter=$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) -c ./etc/qa/phpunit.xml $(shell $(DOCKER_SHELL) php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
 
-mutation-testing: ## Run mutation testing ##*LCH*##
+mutation-testing: ## Run mutation testing ##*LCH*##^static-analysis|unit-tests^##
 	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)
 
-mutation-testing-raw: ## Run mutation testing ####
+mutation-testing-raw: ## Run mutation testing ####^static-analysis|unit-tests^##
 	vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)
 
-composer-require-checker: ## Ensure we require every package used in this package directly ##*C*##
+composer-require-checker: ## Ensure we require every package used in this package directly ##*C*##^composer-dependency-checkers^##
 	$(DOCKER_SHELL) vendor/bin/composer-require-checker --ignore-parse-errors --ansi -vvv --config-file=./etc/qa/composer-require-checker.json
 
-composer-unused: ## Ensure we don't require any package we don't use in this package directly ##*C*##
+composer-unused: ## Ensure we don't require any package we don't use in this package directly ##*C*##^composer-dependency-checkers^##
 	$(DOCKER_SHELL) vendor/bin/composer-unused --ansi --configuration=./etc/qa/composer-unused.php
 
 backward-compatibility-check: ## Check code for backwards incompatible changes ##*C*##

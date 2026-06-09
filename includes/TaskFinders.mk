@@ -12,3 +12,6 @@ task-list-ci-locked: ## CI: Generate a JSON array of jobs to run against the loc
 
 task-list-ci-high: ## CI: Generate a JSON array of jobs to run against the highest dependencies on the primary threading target
 	task-list(ci-high)
+
+supported-features: ## CI: List the features this package supports
+	supported-features(list)
