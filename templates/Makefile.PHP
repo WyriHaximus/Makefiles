@@ -66,6 +66,7 @@ include includes/All.mk
 include includes/Git.Migrations.mk
 include includes/Docs.Migrations.mk
 include includes/PHP.Migrations.mk
+include includes/PHP.SupportedFeatures.Migrations.mk
 include includes/GitHub.Migrations.mk
 include includes/GitHub.Actions.Migrations.mk
 include includes/Renovate.Migrations.mk
