@@ -323,6 +323,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         }
 
         $makefileContents = str_replace('supported-features(list)', '@echo "' . str_replace('"', '\"', $supportedFeaturesJson) . '" ## Count: ' . count($supportedFeatures), $makefileContents);
+        $makefileContents = str_replace('supported-features(raw)', $supportedFeaturesJson, $makefileContents);
 
         file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
 
