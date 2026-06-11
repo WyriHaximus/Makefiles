@@ -6,3 +6,6 @@ migrations-supported-features-php-ensure-we-only-staticly-analyse-tests-with-php
 
 migrations-supported-features-php-ensure-no-phpunit-config-file-is-present-when-unit-tests-are-disabled: #### Ensure we remove the PHPUnit config file when unit-tests aren't enabled ##*I*##
 	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", supported-features(raw))) {exit;} @unlink("etc/qa/phpunit.xml");' || true)
+
+migrations-supported-features-php-ensure-no-infectionphp-config-file-is-present-when-unit-tests-are-disabled: #### Ensure we remove the InfectionPHP config file when unit-tests aren't enabled ##*I*##
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", supported-features(raw))) {exit;} @unlink("etc/qa/infection.json5");' || true)
