@@ -9,3 +9,6 @@ migrations-supported-features-php-ensure-no-phpunit-config-file-is-present-when-
 
 migrations-supported-features-php-ensure-no-infectionphp-config-file-is-present-when-unit-tests-are-disabled: #### Ensure we remove the InfectionPHP config file when unit-tests aren't enabled ##*I*##
 	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", supported-features(raw))) {exit;} @unlink("etc/qa/infection.json5");' || true)
+
+migrations-supported-features-php-ensure-no-rector-config-file-is-present-when-code-style-is-disabled: #### Ensure we remove the RectorPHP config file when code-style isn't enabled ##*I*##
+	($(DOCKER_RUN) php -r 'if (in_array("code-style", supported-features(raw))) {exit;} @unlink("etc/qa/rector.php");' || true)
