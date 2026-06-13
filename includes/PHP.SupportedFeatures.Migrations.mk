@@ -12,3 +12,6 @@ migrations-supported-features-php-ensure-no-infectionphp-config-file-is-present-
 
 migrations-supported-features-php-ensure-no-rector-config-file-is-present-when-code-style-is-disabled: #### Ensure we remove the RectorPHP config file when code-style isn't enabled ##*I*##
 	($(DOCKER_RUN) php -r 'if (in_array("code-style", supported-features(raw))) {exit;} @unlink("etc/qa/rector.php");' || true)
+
+migrations-supported-features-php-ensure-no-phpcs-config-file-is-present-when-code-style-is-disabled: #### Ensure we remove the PHPCSS config file when code-style isn't enabled ##*I*##
+	($(DOCKER_RUN) php -r 'if (in_array("code-style", supported-features(raw))) {exit;} @unlink("etc/qa/phpcs.xml");' || true)
