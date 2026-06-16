@@ -102,7 +102,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             return;
         }
 
-        $supportedFeatures = self::extractSupportedFeatures($json);
+        $supportedFeatures = self::extractSupportedFeatures($json, $requiredPackagesAndExtensions);
 
         if (array_key_exists('name', $json) && $json['name'] === 'wyrihaximus/makefiles') {
             self::generateMakefile($event->getIO(), $rootPackagePath, true, $requiredPackagesAndExtensions, $supportedFeatures);
@@ -390,14 +390,30 @@ final class Installer implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * @param array<mixed> $json
+     * @param array<mixed>  $json
+     * @param array<string> $requiredPackagesAndExtensions
      *
      * @return array<string, bool>
      */
-    private static function extractSupportedFeatures(array $json): array
+    private static function extractSupportedFeatures(array $json, array $requiredPackagesAndExtensions): array
     {
         /** @var array<string, bool> $supportedFeatures */
         $supportedFeatures = SupportedFeatures::DEFAULTS;
+
+        foreach ($requiredPackagesAndExtensions as $packageOrExtension) {
+            if ($packageOrExtension === 'ext-parallel') {
+                $supportedFeatures[SupportedFeatures::FEATURE_MACOS]   = false;
+                $supportedFeatures[SupportedFeatures::FEATURE_WINDOWS] = false;
+                $supportedFeatures[SupportedFeatures::FEATURE_ZTS]     = true;
+            }
+
+            if ($packageOrExtension !== 'ext-pcntl') {
+                continue;
+            }
+
+            $supportedFeatures[SupportedFeatures::FEATURE_MACOS]   = false;
+            $supportedFeatures[SupportedFeatures::FEATURE_WINDOWS] = false;
+        }
 
         /** @phpstan-ignore argument.type,argument.type */
         if (array_key_exists('extra', $json) && array_key_exists('wyrihaximus', $json['extra']) && (array_key_exists('supported-features', $json['extra']['wyrihaximus']) && is_array($json['extra']['wyrihaximus']['supported-features']))) {
