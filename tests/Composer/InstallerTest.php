@@ -107,6 +107,10 @@ final class InstallerTest extends TestCase
 
         $output = $io->output();
 
+        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Supported features Matrix:', $output);
+        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> composer-plugin: ✅', $output);
+        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> unit-tests: ✅', $output);
+        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> zts: ❌', $output);
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Generating Makefile', $output);
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: All.mk', $output);
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: PHP.mk', $output);

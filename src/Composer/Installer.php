@@ -33,6 +33,7 @@ use function file_put_contents;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_bool;
 use function is_string;
 use function json_decode;
 use function json_encode;
@@ -138,18 +139,24 @@ final class Installer implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * @param array<string> $requiredPackagesAndExtensions
-     * @param array<string> $supportedFeatures
+     * @param array<string>       $requiredPackagesAndExtensions
+     * @param array<string, bool> $supportedFeatures
      */
     private static function generateMakefile(IOInterface $io, string $rootPackagePath, bool $selfRoot, array $requiredPackagesAndExtensions, array $supportedFeatures): void
     {
-        $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
+        $io->write('<info>wyrihaximus/makefiles:</info> Supported features Matrix:');
+        foreach ($supportedFeatures as $name => $supported) {
+            $io->write('<info>wyrihaximus/makefiles:</info> ' . $name . ': ' . ($supported ? '✅' : '❌'));
+        }
+
         $referenceRoot    = $rootPackagePath . ($selfRoot ? '' : 'vendor' . DIRECTORY_SEPARATOR . 'wyrihaximus' . DIRECTORY_SEPARATOR . 'makefiles' . DIRECTORY_SEPARATOR);
         $makefileContents = file_get_contents($referenceRoot . 'templates' . DIRECTORY_SEPARATOR . 'Makefile.PHP');
 
         if (! is_string($makefileContents)) {
             return;
         }
+
+        $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
 
         $makefileContents = preg_replace_callback(
             '/include includes\/([a-zA-Z.]+)/',
@@ -242,7 +249,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
                     if ($matches[7][$i][0] !== '') {
                         foreach (explode('|', $matches[7][$i][0]) as $feature) {
-                            if (! in_array($feature, $supportedFeatures, true)) {
+                            if (! array_key_exists($feature, $supportedFeatures) || $supportedFeatures[$feature] === false) {
                                 continue 2;
                             }
                         }
@@ -317,12 +324,13 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             );
         }
 
-        $supportedFeaturesJson = json_encode($supportedFeatures);
+        $supportedFeaturesList = array_keys(array_filter($supportedFeatures, static fn (bool $featureSupported): bool => $featureSupported));
+        $supportedFeaturesJson = json_encode($supportedFeaturesList);
         if (! is_string($supportedFeaturesJson)) {
             throw new RuntimeException('Failed to JSON encode supported features json: ' . json_last_error_msg());
         }
 
-        $makefileContents = str_replace('supported-features(list)', '@echo "' . str_replace('"', '\"', $supportedFeaturesJson) . '" ## Count: ' . count($supportedFeatures), $makefileContents);
+        $makefileContents = str_replace('supported-features(list)', '@echo "' . str_replace('"', '\"', $supportedFeaturesJson) . '" ## Count: ' . count($supportedFeaturesList), $makefileContents);
         $makefileContents = str_replace('supported-features(raw)', $supportedFeaturesJson, $makefileContents);
 
         file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
@@ -384,7 +392,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
     /**
      * @param array<mixed> $json
      *
-     * @return list<string>
+     * @return array<string, bool>
      */
     private static function extractSupportedFeatures(array $json): array
     {
@@ -398,11 +406,14 @@ final class Installer implements PluginInterface, EventSubscriberInterface
                     continue;
                 }
 
+                if (! is_bool($featureSupported)) {
+                    continue;
+                }
+
                 $supportedFeatures[$feature] = $featureSupported;
             }
         }
 
-        /** @phpstan-ignore argument.type */
-        return array_keys(array_filter($supportedFeatures, static fn (bool $featureSupported): bool => $featureSupported));
+        return $supportedFeatures;
     }
 }
