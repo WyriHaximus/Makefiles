@@ -84,7 +84,13 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         $requiredPackagesAndExtensions = array_unique([
             ...array_keys($event->getComposer()->getPackage()->getRequires()),
             ...array_keys($event->getComposer()->getPackage()->getDevRequires()),
-            ...self::retrieveRequiredPackagesAndExtensions(self::getVendorDir($event->getComposer())),
+            ...self::retrieveRequiredPackagesAndExtensions(self::getVendorDir($event->getComposer()), true),
+        ]);
+        /** @var array<string> $requiredPackagesAndExtensionsWithoutDev */
+        $requiredPackagesAndExtensionsWithoutDev = array_unique([
+            ...array_keys($event->getComposer()->getPackage()->getRequires()),
+            ...array_keys($event->getComposer()->getPackage()->getDevRequires()),
+            ...self::retrieveRequiredPackagesAndExtensions(self::getVendorDir($event->getComposer()), false),
         ]);
 
         $rootPackagePath = dirname(self::getVendorDir($event->getComposer())) . DIRECTORY_SEPARATOR;
@@ -102,7 +108,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             return;
         }
 
-        $supportedFeatures = self::extractSupportedFeatures($json, $requiredPackagesAndExtensions);
+        $supportedFeatures = self::extractSupportedFeatures($json, $requiredPackagesAndExtensionsWithoutDev);
 
         if (array_key_exists('name', $json) && $json['name'] === 'wyrihaximus/makefiles') {
             self::generateMakefile($event->getIO(), $rootPackagePath, true, $requiredPackagesAndExtensions, $supportedFeatures);
@@ -361,7 +367,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
      *
      * @return iterable<string>
      */
-    private static function retrieveRequiredPackagesAndExtensions(string $vendorDir): iterable
+    private static function retrieveRequiredPackagesAndExtensions(string $vendorDir, bool $includeDev): iterable
     {
         $loader = new JsonLoader(new ArrayLoader());
 
@@ -382,6 +388,10 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             }
 
             if (! array_key_exists('require-dev', $json) || ! is_array($json['require-dev'])) {
+                continue;
+            }
+
+            if (! $includeDev) {
                 continue;
             }
 
