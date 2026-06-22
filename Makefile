@@ -412,6 +412,9 @@ install: ### Install dependencies ####
 composer-require: ### Require passed dependencies ####
 	$(DOCKER_INTERACTIVE_SHELL) composer require -W $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
+composer-why: ### Show why a specific dependency is loaded ####
+	$(DOCKER_INTERACTIVE_SHELL) composer why $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+
 update: ### Update dependencies ####
 	$(DOCKER_SHELL) composer update -W
 
