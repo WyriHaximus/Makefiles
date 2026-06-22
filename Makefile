@@ -269,22 +269,22 @@ migrations-inline-code-remove-line-internal: #### Remove all lines that contain 
 	($(DOCKER_RUN) php -r '$$possibleDirectories = ["src", "tests", "etc", "examples"]; foreach ($$possibleDirectories as $$possibleDirectory) { if (!file_exists($$possibleDirectory)) {continue;} $$i = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($$possibleDirectory)); $$i->rewind(); while ($$i->valid()) { if (!is_file($$i->key()) || (is_file($$i->key()) && !str_ends_with($$i->key(), ".php"))) { $$i->next(); continue; } $$fileContents = explode("\n", file_get_contents($$i->key())); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "@internal")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$i->key(), implode("\n", $$fileContents)); $$i->next(); } }' || true)
 
 migrations-supported-features-php-ensure-we-only-cs-check-and-fix-tests-if-unit-tests-is-enabled: #### Ensure we only cs check/fix tests/ if unit-tests is enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","static-analysis","unit-tests"])) {exit;} $$phpCSCongifFIle = "etc/qa/phpcs.xml"; $$fileContents = explode("\n", file_get_contents($$phpCSCongifFIle)); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "<file>../../tests</file>")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$phpCSCongifFIle, implode("\n", $$fileContents));' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} $$phpCSCongifFIle = "etc/qa/phpcs.xml"; $$fileContents = explode("\n", file_get_contents($$phpCSCongifFIle)); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "<file>../../tests</file>")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$phpCSCongifFIle, implode("\n", $$fileContents));' || true)
 
 migrations-supported-features-php-ensure-we-only-staticly-analyse-tests-with-phpstan-if-unit-tests-is-enabled: #### Ensure we only staticly analyse tests/ with PHPStan if unit-tests is enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","static-analysis","unit-tests"])) {exit;} $$phpStanCongifFIle = "etc/qa/phpstan.neon"; $$fileContents = explode("\n", file_get_contents($$phpStanCongifFIle)); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "- ../../tests")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$phpStanCongifFIle, implode("\n", $$fileContents));' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} $$phpStanCongifFIle = "etc/qa/phpstan.neon"; $$fileContents = explode("\n", file_get_contents($$phpStanCongifFIle)); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "- ../../tests")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$phpStanCongifFIle, implode("\n", $$fileContents));' || true)
 
 migrations-supported-features-php-ensure-no-phpunit-config-file-is-present-when-unit-tests-are-disabled: #### Ensure we remove the PHPUnit config file when unit-tests aren't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/phpunit.xml");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/phpunit.xml");' || true)
 
 migrations-supported-features-php-ensure-no-infectionphp-config-file-is-present-when-unit-tests-are-disabled: #### Ensure we remove the InfectionPHP config file when unit-tests aren't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/infection.json5");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/infection.json5");' || true)
 
 migrations-supported-features-php-ensure-no-rector-config-file-is-present-when-code-style-is-disabled: #### Ensure we remove the RectorPHP config file when code-style isn't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("code-style", ["code-style","composer-plugin","composer-dependency-checkers","linux","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/rector.php");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("code-style", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/rector.php");' || true)
 
 migrations-supported-features-php-ensure-no-phpcs-config-file-is-present-when-code-style-is-disabled: #### Ensure we remove the PHPCSS config file when code-style isn't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("code-style", ["code-style","composer-plugin","composer-dependency-checkers","linux","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/phpcs.xml");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("code-style", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/phpcs.xml");' || true)
 
 migrations-php-make-sure-github-exists: #### Make sure .github/ exists ##*I*##
 	($(DOCKER_RUN) mkdir .github || true)
@@ -443,5 +443,5 @@ task-list-ci-high: ## CI: Generate a JSON array of jobs to run against the highe
 	@echo "[\"syntax-php\",\"cs\",\"stan\",\"mutation-testing\"]" ## Count: 4
 
 supported-features: ## CI: List the features this package supports
-	@echo "[\"code-style\",\"composer-plugin\",\"composer-dependency-checkers\",\"linux\",\"static-analysis\",\"unit-tests\"]" ## Count: 6
+	@echo "[\"code-style\",\"composer-plugin\",\"composer-dependency-checkers\",\"linux\",\"macos\",\"static-analysis\",\"unit-tests\",\"windows\"]" ## Count: 8
 
