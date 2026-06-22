@@ -15,6 +15,7 @@ use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Symfony\Component\Console\Output\StreamOutput;
 use WyriHaximus\Makefiles\Composer\Installer;
 use WyriHaximus\TestUtilities\TestCase;
@@ -23,16 +24,17 @@ use function closedir;
 use function copy;
 use function dirname;
 use function file_exists;
+use function file_get_contents;
+use function fopen;
 use function fseek;
 use function is_dir;
 use function is_file;
+use function is_resource;
 use function mkdir;
+use function opendir;
 use function readdir;
-use function Safe\file_get_contents;
-use function Safe\fopen;
-use function Safe\opendir;
-use function Safe\stream_get_contents;
-use function Safe\unlink;
+use function stream_get_contents;
+use function unlink;
 
 use const DIRECTORY_SEPARATOR;
 
@@ -59,7 +61,12 @@ final class InstallerTest extends TestCase
 
             public function __construct()
             {
-                $this->output = new StreamOutput(fopen('php://memory', 'rw'), decorated: false);
+                $stream = fopen('php://memory', 'rw');
+                if (! is_resource($stream)) {
+                    throw new RuntimeException('Failed to open stream');
+                }
+
+                $this->output = new StreamOutput($stream, decorated: false);
             }
 
             public function output(): string
@@ -126,6 +133,10 @@ final class InstallerTest extends TestCase
     private function recurseCopy(string $src, string $dst): void
     {
         $dir = opendir($src);
+        if (! is_resource($dir)) {
+            throw new RuntimeException('Failed to open directory');
+        }
+
         if (! file_exists($dst)) {
             mkdir($dst);
         }
