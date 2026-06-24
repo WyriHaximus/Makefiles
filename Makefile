@@ -131,6 +131,9 @@ migrations-php-remove-old-phpunit-xml-dist-config: #### Make sure we remove phpu
 migrations-php-remove-old-phpunit-xml-config: #### Make sure we remove phpunit.xml ##*I*##
 	($(DOCKER_RUN) rm phpunit.xml || true)
 
+migrations-php-remove-old-php-cs-fiver-xml-config: #### Make sure we remove .php_cs ##*I*##
+	($(DOCKER_RUN) rm .php_cs || true)
+
 migrations-php-ensure-etc-ci-markdown-link-checker-json-exists: #### Make sure we have etc/ci/markdown-link-checker.json ##*I*##
 	($(DOCKER_RUN) php -r '$$markdownLinkCheckerFile = "etc/ci/markdown-link-checker.json"; $$json = json_decode("{\"httpHeaders\": [{\"urls\": [\"https://docs.github.com/\"],\"headers\": {\"Accept-Encoding\": \"zstd, br, gzip, deflate\"}}]}"); if (file_exists($$markdownLinkCheckerFile)) {exit;} file_put_contents($$markdownLinkCheckerFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
 
