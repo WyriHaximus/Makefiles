@@ -31,6 +31,9 @@ migrations-php-remove-old-php-cs-fiver-config: #### Make sure we remove .php_cs 
 migrations-php-remove-old-scrutinizer-yml-config: #### Make sure we remove .scrutinizer.yml ##*I*##
 	($(DOCKER_RUN) rm .scrutinizer.yml || true)
 
+migrations-php-remove-old-appveyor-yml-config: #### Make sure we remove appveyor.yml ##*I*##
+	($(DOCKER_RUN) rm appveyor.yml || true)
+
 migrations-php-ensure-etc-ci-markdown-link-checker-json-exists: #### Make sure we have etc/ci/markdown-link-checker.json ##*I*##
 	($(DOCKER_RUN) php -r '$$markdownLinkCheckerFile = "etc/ci/markdown-link-checker.json"; $$json = json_decode("{\"httpHeaders\": [{\"urls\": [\"https://docs.github.com/\"],\"headers\": {\"Accept-Encoding\": \"zstd, br, gzip, deflate\"}}]}"); if (file_exists($$markdownLinkCheckerFile)) {exit;} file_put_contents($$markdownLinkCheckerFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
 
