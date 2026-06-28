@@ -59,6 +59,9 @@ composer-require: ### Require passed dependencies ####
 composer-why: ### Show why a specific dependency is loaded ####
 	$(DOCKER_INTERACTIVE_SHELL) composer why $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
+composer-outdated: ### Show outdated packages ####
+	$(DOCKER_SHELL) composer outdated
+
 update: ### Update dependencies ####
 	$(DOCKER_SHELL) composer update -W
 
