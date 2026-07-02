@@ -1,37 +1,37 @@
-migrations-php-make-sure-var-exists: #### Make sure var/ exists ##*I*##
+migrations-php-make-sure-var-exists: #### Make sure `var/` exists ##*I*##
 	($(DOCKER_RUN) mkdir var || true)
 
-migrations-php-make-sure-var-gitkeep-exists: #### Make sure var/.gitkeep exists ##*I*##
+migrations-php-make-sure-var-gitkeep-exists: #### Make sure `var/.gitkeep` exists ##*I*##
 	($(DOCKER_RUN) touch var/.gitkeep || true)
 
-migrations-php-make-sure-etc-exists: #### Make sure etc/ exists ##*I*##
+migrations-php-make-sure-etc-exists: #### Make sure `etc/` exists ##*I*##
 	($(DOCKER_RUN) mkdir etc || true)
 
-migrations-php-make-sure-etc-ci-exists: #### Make sure etc/ci/ exists ##*I*##
+migrations-php-make-sure-etc-ci-exists: #### Make sure `etc/ci/` exists ##*I*##
 	($(DOCKER_RUN) mkdir etc/ci || true)
 
-migrations-php-make-sure-etc-qa-exists: #### Make sure etc/qa/ exists ##*I*##
+migrations-php-make-sure-etc-qa-exists: #### Make sure `etc/qa/` exists ##*I*##
 	($(DOCKER_RUN) mkdir etc/qa || true)
 
-migrations-php-move-psalm-xml-config-to-etc: #### Move psalm.xml to etc/qa/psalm.xml ##*I*##
+migrations-php-move-psalm-xml-config-to-etc: #### Move `psalm.xml` to `etc/qa/psalm.xml` ##*I*##
 	($(DOCKER_RUN) mv psalm.xml etc/qa/psalm.xml || true)
 
-migrations-php-remove-psalm-xml-config: #### Make sure we remove etc/qa/psalm.xml ##*I*##
+migrations-php-remove-psalm-xml-config: #### Make sure we remove `etc/qa/psalm.xml` ##*I*##
 	($(DOCKER_RUN) rm etc/qa/psalm.xml || true)
 
-migrations-php-remove-old-phpunit-xml-dist-config: #### Make sure we remove phpunit.xml.dist ##*I*##
+migrations-php-remove-old-phpunit-xml-dist-config: #### Make sure we remove `phpunit.xml.dist` ##*I*##
 	($(DOCKER_RUN) rm phpunit.xml.dist || true)
 
-migrations-php-remove-old-phpunit-xml-config: #### Make sure we remove phpunit.xml ##*I*##
+migrations-php-remove-old-phpunit-xml-config: #### Make sure we remove `phpunit.xml` ##*I*##
 	($(DOCKER_RUN) rm phpunit.xml || true)
 
-migrations-php-remove-old-php-cs-fiver-config: #### Make sure we remove .php_cs ##*I*##
+migrations-php-remove-old-php-cs-fiver-config: #### Make sure we remove `.php_cs` ##*I*##
 	($(DOCKER_RUN) rm .php_cs || true)
 
-migrations-php-remove-old-scrutinizer-yml-config: #### Make sure we remove .scrutinizer.yml ##*I*##
+migrations-php-remove-old-scrutinizer-yml-config: #### Make sure we remove `.scrutinizer.yml` ##*I*##
 	($(DOCKER_RUN) rm .scrutinizer.yml || true)
 
-migrations-php-remove-old-appveyor-yml-config: #### Make sure we remove appveyor.yml ##*I*##
+migrations-php-remove-old-appveyor-yml-config: #### Make sure we remove `appveyor.yml` ##*I*##
 	($(DOCKER_RUN) rm appveyor.yml || true)
 
 migrations-php-ensure-etc-ci-markdown-link-checker-json-exists: #### Make sure we have etc/ci/markdown-link-checker.json ##*I*##
