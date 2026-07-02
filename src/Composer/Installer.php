@@ -227,7 +227,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         ];
 
         preg_match_all(
-            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,_\/\-\\\\]+\s+)+)##\*([ADILCH]+)\*(##\^([a-z-|]+)\^##)?/',
+            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,_\`\/\-\\\\]+\s+)+)##\*([ADILCH]+)\*(##\^([a-z-|]+)\^##)?/',
             $makefileContents,
             $matches,
             PREG_OFFSET_CAPTURE,
