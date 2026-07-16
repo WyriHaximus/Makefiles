@@ -1,0 +1,1 @@
+    ->addNamedFilter(\ComposerUnused\ComposerUnused\Configuration\NamedFilter::fromString('

@@ -23,13 +23,17 @@ use function array_intersect;
 use function array_key_exists;
 use function array_keys;
 use function array_unique;
+use function array_values;
 use function assert;
+use function base64_encode;
+use function basename;
 use function count;
 use function dirname;
 use function explode;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
+use function glob;
 use function implode;
 use function in_array;
 use function is_array;
@@ -338,6 +342,13 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
         $makefileContents = str_replace('supported-features(list)', '@echo "' . str_replace('"', '\"', $supportedFeaturesJson) . '" ## Count: ' . count($supportedFeaturesList), $makefileContents);
         $makefileContents = str_replace('supported-features(raw)', $supportedFeaturesJson, $makefileContents);
+
+        $base64FileContents = [];
+        foreach (glob(dirname(__FILE__, 3) . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'base64' . DIRECTORY_SEPARATOR . '*') as $file) {
+            $base64FileContents['base64(' . basename($file) . ')'] = base64_encode(file_get_contents($file));
+        }
+
+        $makefileContents = str_replace(array_keys($base64FileContents), array_values($base64FileContents), $makefileContents);
 
         file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
 
