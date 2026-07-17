@@ -4,7 +4,7 @@ composer-validate: ## Ensure we don't require any package we don't use in this p
 syntax-php: ## Lint PHP syntax ##*ILH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
-composer-normalize: #### Normalize composer.json ##*I*##
+composer-normalize: ## Normalize composer.json ##*I*##
 	$(DOCKER_RUN) composer normalize
 	$(MAKE) update-lock
 
