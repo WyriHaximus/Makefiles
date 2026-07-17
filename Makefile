@@ -69,7 +69,7 @@ endif
 all: ## Runs everything ####
 	$(DOCKER_RUN_WITH_SOCKET) make all-raw
 all-raw: ## The real runs everything, but due to sponge it has to be ran inside DOCKER_RUN ##U##
-	$(MAKE) composer-validate syntax-php rector-upgrade cs-fix cs stan unit-testing mutation-testing composer-require-checker composer-unused backward-compatibility-check ## Count: 11
+	$(MAKE) composer-validate syntax-php composer-normalize rector-upgrade cs-fix cs stan unit-testing mutation-testing composer-require-checker composer-unused backward-compatibility-check ## Count: 12
 
 
 ## Temporary set of migrations to get all my repos in shape
@@ -380,7 +380,7 @@ composer-validate: ## Ensure we don't require any package we don't use in this p
 syntax-php: ## Lint PHP syntax ##*ILH*##
 	$(DOCKER_RUN) vendor/bin/parallel-lint --exclude vendor .
 
-composer-normalize: #### Normalize composer.json ##*I*##
+composer-normalize: ## Normalize composer.json ##*I*##
 	$(DOCKER_RUN) composer normalize
 	$(MAKE) update-lock
 
