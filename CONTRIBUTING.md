@@ -18,6 +18,10 @@ If some of the PHPStan or other checks are to strict or intimidating that is fin
 
     make contrib
 
+You can list all the contrib commands with:
+
+    make help-contrib
+
 Push to your fork and [submit a pull request][pr].
 
 [pr]: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request
