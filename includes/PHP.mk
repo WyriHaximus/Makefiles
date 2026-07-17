@@ -66,7 +66,7 @@ update: ### Update dependencies ####
 	$(DOCKER_SHELL) composer update -W
 
 update-lock: ### Update lockfile ####
-	$(DOCKER_RUN) COMPOSER_DISABLE_NETWORK=1 composer update --lock --no-scripts || $(DOCKER_RUN) composer update --lock --no-scripts
+	$(DOCKER_RUN_WITHOUT_NETWORK_FOR_COMPOSER) composer update --lock --no-scripts || $(DOCKER_RUN) composer update --lock --no-scripts
 
 outdated: ### Show outdated dependencies ####
 	$(DOCKER_SHELL) composer outdated
