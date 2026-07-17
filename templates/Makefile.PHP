@@ -68,8 +68,11 @@ else
     THREADS=$(shell nproc)
 endif
 
-## Run everything extra point
+## Run everything extra points
 include includes/All.mk
+
+## Run a subset of everything for those that find everything intimidating
+include includes/Contrib.mk
 
 ## Temporary set of migrations to get all my repos in shape
 include includes/Git.Migrations.mk

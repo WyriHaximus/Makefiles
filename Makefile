@@ -68,11 +68,18 @@ else
     THREADS=$(shell nproc)
 endif
 
-## Run everything extra point
+## Run everything extra points
 all: ## Runs everything ####
 	$(DOCKER_RUN_WITH_SOCKET) make all-raw
 all-raw: ## The real runs everything, but due to sponge it has to be ran inside DOCKER_RUN ##U##
 	$(MAKE) composer-validate syntax-php composer-normalize rector-upgrade cs-fix cs stan unit-testing mutation-testing composer-require-checker composer-unused backward-compatibility-check ## Count: 12
+
+
+## Run a subset of everything for those that find everything intimidating
+contrib: ## Runs a subset of everything ####
+	$(DOCKER_RUN_WITH_SOCKET) make contrib-raw
+contrib-raw: ## The real runs everything, but due to sponge it has to be ran inside DOCKER_RUN ##U##
+	$(MAKE) cs-fix cs unit-testing composer-require-checker composer-unused ## Count: 5
 
 
 ## Temporary set of migrations to get all my repos in shape
@@ -390,19 +397,19 @@ composer-normalize: ## Normalize composer.json ##*I*##
 rector-upgrade: ## Upgrade any automatically upgradable old code ##*I*##^code-style^##
 	$(DOCKER_RUN) vendor/bin/rector -c ./etc/qa/rector.php
 
-cs-fix: ## Fix any automatically fixable code style issues ##*I*##^code-style^##
+cs-fix: ## Fix any automatically fixable code style issues ##*EI*##^code-style^##
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml || $(MAKE) cs
 
 cs-fix-debug: ## Fix any automatically fixable code style issues, but with debugging output ####^code-style^##
 	$(DOCKER_RUN) vendor/bin/phpcbf --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml -vvvv
 
-cs: ## Check the code for code style issues ##*LCH*##^code-style^##
+cs: ## Check the code for code style issues ##*ELCH*##^code-style^##
 	$(DOCKER_SHELL) vendor/bin/phpcs --parallel=1 --cache=./var/.phpcs.cache.json --standard=./etc/qa/phpcs.xml
 
 stan: ## Run static analysis (PHPStan) ##*LCH*##^static-analysis^##
 	$(DOCKER_SHELL) vendor/bin/phpstan analyse --ansi --configuration=./etc/qa/phpstan.neon
 
-unit-testing: ## Run tests ##*A*##^unit-tests^##
+unit-testing: ## Run tests ##*AE*##^unit-tests^##
 	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml $(shell $(DOCKER_SHELL) php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
 
 unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
@@ -417,10 +424,10 @@ mutation-testing: ## Run mutation testing ##*LCH*##^static-analysis|unit-tests^#
 mutation-testing-raw: ## Run mutation testing ####^static-analysis|unit-tests^##
 	vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)
 
-composer-require-checker: ## Ensure we require every package used in this package directly ##*C*##^composer-dependency-checkers^##
+composer-require-checker: ## Ensure we require every package used in this package directly ##*EC*##^composer-dependency-checkers^##
 	$(DOCKER_SHELL) vendor/bin/composer-require-checker --ignore-parse-errors --ansi -vvv --config-file=./etc/qa/composer-require-checker.json
 
-composer-unused: ## Ensure we don't require any package we don't use in this package directly ##*C*##^composer-dependency-checkers^##
+composer-unused: ## Ensure we don't require any package we don't use in this package directly ##*EC*##^composer-dependency-checkers^##
 	$(DOCKER_SHELL) vendor/bin/composer-unused --ansi --configuration=./etc/qa/composer-unused.php
 
 backward-compatibility-check: ## Check code for backwards incompatible changes ##*C*##

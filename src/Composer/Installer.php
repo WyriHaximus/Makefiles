@@ -222,6 +222,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
                 'all',
                 'ci-all',
             ],
+            'E' => ['contrib'],
             'D' => ['ci-dos'],
             'I' => [
                 'all',
@@ -246,6 +247,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         ];
         $tasks          = [
             'all' => [],
+            'contrib' => [],
             'ci-all' => [],
             'ci-dos' => [],
             'ci-low' => [],
@@ -255,7 +257,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         ];
 
         preg_match_all(
-            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,_\`\/\-\\\\]+\s+)+)##\*([ADILCH]+)\*(##\^([a-z-|]+)\^##)?/',
+            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,_\`\/\-\\\\]+\s+)+)##\*([AEDILCH]+)\*(##\^([a-z-|]+)\^##)?/',
             $makefileContents,
             $matches,
             PREG_OFFSET_CAPTURE,
