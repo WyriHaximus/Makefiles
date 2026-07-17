@@ -20,6 +20,7 @@ use function array_filter;
 use function array_intersect;
 use function array_key_exists;
 use function array_keys;
+use function array_map;
 use function array_unique;
 use function array_values;
 use function assert;
@@ -36,11 +37,15 @@ use function implode;
 use function in_array;
 use function is_array;
 use function is_bool;
+use function is_file;
+use function is_float;
+use function is_int;
 use function is_string;
 use function json_decode;
 use function json_encode;
 use function json_last_error_msg;
 use function preg_last_error_msg;
+use function preg_match;
 use function preg_match_all;
 use function preg_replace_callback;
 use function realpath;
@@ -48,6 +53,10 @@ use function str_contains;
 use function str_replace;
 use function str_starts_with;
 use function strlen;
+use function strpos;
+use function substr;
+use function trim;
+use function usort;
 
 use const DIRECTORY_SEPARATOR;
 use const PHP_INT_MIN;
@@ -168,6 +177,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
         $makefileContents = self::loadIncludes($io, $rootPackagePath, $referenceRoot, $makefileContents);
         $makefileContents = self::injectTaskLists($makefileContents, $supportedFeatures);
+        $makefileContents = self::injectHelp($makefileContents);
         $makefileContents = self::injectRequirementConditionals($makefileContents, $requiredPackagesAndExtensions);
         $makefileContents = self::injectLowestVersions($makefileContents, $rootPackagePath);
         $makefileContents = self::injectSupportedFeatures($makefileContents, $supportedFeatures);
@@ -309,6 +319,88 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         return $makefileContents;
     }
 
+    /** Expands the `help(...)` placeholders with pregenerated target listings for awk formatting. */
+    private static function injectHelp(string $makefileContents): string
+    {
+        /** @var array<string, list<array{0: string, 1: string}>> $helpTargets */
+        $helpTargets = [
+            'main' => [],
+            'migrations' => [],
+            'contrib' => [],
+        ];
+
+        preg_match_all(
+            '/^([a-zA-Z0-9_-]+):.*?## .+$/m',
+            $makefileContents,
+            $matches,
+        );
+
+        foreach ($matches[0] as $i => $fullLine) {
+            if (str_contains($fullLine, '##U##')) {
+                continue;
+            }
+
+            if (preg_match('/^([^:]+):.*?## (.+)$/', $fullLine, $parts) !== 1) {
+                continue;
+            }
+
+            $target         = $matches[1][$i];
+            $haspos         = strpos($parts[2], '#');
+            $helpLine       = trim(
+                $target . ': ## ' . substr(
+                    $parts[2],
+                    0,
+                    $haspos !== false ? $haspos : strlen($parts[2]),
+                ),
+            );
+            $isMigration    = str_starts_with($target, 'migrations-');
+            $hasContribFlag = preg_match('/##\*([AEDILCH]+)\*/', $fullLine, $typeMatch) === 1 && str_contains($typeMatch[1], 'E');
+
+            if (! $isMigration) {
+                $helpTargets['main'][] = [
+                    $target,
+                    $helpLine,
+                ];
+            }
+
+            if ($isMigration) {
+                $helpTargets['migrations'][] = [
+                    $target,
+                    $helpLine,
+                ];
+            }
+
+            if ($isMigration || ! $hasContribFlag) {
+                continue;
+            }
+
+            $helpTargets['contrib'][] = [
+                $target,
+                $helpLine,
+            ];
+        }
+
+        foreach ($helpTargets as $helpType => $entries) {
+            usort($entries, static fn (array $a, array $b): int => $a[0] <=> $b[0]);
+
+            $helpList = implode(
+                '\n',
+                array_map(
+                    static fn (array $entry): string => str_replace("'", "'\\''", $entry[1]),
+                    $entries,
+                ),
+            );
+
+            $makefileContents = str_replace(
+                'help(' . $helpType . ')',
+                "'" . $helpList . "'",
+                $makefileContents,
+            );
+        }
+
+        return $makefileContents;
+    }
+
     /**
      * Resolves `when_in_requirements(...)` placeholders to one of two values depending on whether
      * any of the listed packages/extensions are present in the requirements.
@@ -325,11 +417,13 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         );
 
         foreach ($matchesSecondPass[0] as $i => $fullLine) {
+            $requiredPackagesJson = json_decode($matchesSecondPass[2][$i][0], true);
+            $requiredPackages     = is_array($requiredPackagesJson) ? array_values(array_filter($requiredPackagesJson, is_string(...))) : [];
+
             $makefileContents = str_replace(
                 $fullLine[0],
                 $matchesSecondPass[1][$i][0] . '=' . (count(array_intersect(
-                    /** @phpstan-ignore argument.type */
-                    json_decode($matchesSecondPass[2][$i][0], true),
+                    $requiredPackages,
                     $requiredPackagesAndExtensions,
                 )) > 0 ? $matchesSecondPass[3][$i][0] : $matchesSecondPass[4][$i][0]),
                 $makefileContents,
@@ -350,29 +444,16 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         );
 
         foreach ($matchesThirdPass[0] as $i => $fullLine) {
+            $fileContents = file_get_contents($rootPackagePath . $matchesThirdPass[2][$i][0]);
+            $json         = is_string($fileContents) ? json_decode($fileContents, true) : null;
+            $version      = self::cleanVersionToMajorMinor(self::getValueFromTree(
+                is_array($json) ? $json : [],
+                explode('.', $matchesThirdPass[3][$i][0]),
+            ));
+
             $makefileContents = str_replace(
                 $fullLine[0],
-                $matchesThirdPass[1][$i][0] . '="' . (static function (string $version): string {
-                    [$major, $minor] = explode('.', $version);
-
-                    return $major . '.' . $minor;
-                })((static function (array $array, array $keys): string {
-                    $current = $array;
-                    foreach ($keys as $key) {
-                        if (! is_array($current) || ! array_key_exists($key, $current)) {
-                            return '0';
-                        }
-
-                        $current = $current[$key];
-                    }
-
-                    /** @phpstan-ignore return.type */
-                    return $current;
-                })(
-                    /** @phpstan-ignore argument.type,argument.type */
-                    json_decode(file_get_contents($rootPackagePath . $matchesThirdPass[2][$i][0]), true),
-                    explode('.', $matchesThirdPass[3][$i][0]),
-                )) . '"',
+                $matchesThirdPass[1][$i][0] . '="' . $version . '"',
                 $makefileContents,
             );
         }
@@ -421,9 +502,13 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
     private static function loadInclude(IOInterface $io, string $makefilesPackageRoot, string $filename): string
     {
-        $makefileIncludePath = realpath($makefilesPackageRoot . $filename);
-        /** @phpstan-ignore function.alreadyNarrowedType */
-        if (! is_string($makefileIncludePath) || ! str_starts_with($makefileIncludePath, $makefileIncludePath) || ! file_exists($makefileIncludePath)) {
+        $candidatePath = $makefilesPackageRoot . $filename;
+        if (! is_file($candidatePath)) {
+            return '';
+        }
+
+        $makefileIncludePath = realpath($candidatePath);
+        if (! str_starts_with($makefileIncludePath, $makefileIncludePath) || ! file_exists($makefileIncludePath)) {
             return '';
         }
 
@@ -498,8 +583,14 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             $supportedFeatures[SupportedFeatures::FEATURE_WINDOWS] = false;
         }
 
-        /** @phpstan-ignore argument.type,argument.type */
-        if (array_key_exists('extra', $json) && array_key_exists('wyrihaximus', $json['extra']) && (array_key_exists('supported-features', $json['extra']['wyrihaximus']) && is_array($json['extra']['wyrihaximus']['supported-features']))) {
+        if (
+            array_key_exists('extra', $json)
+            && is_array($json['extra'])
+            && array_key_exists('wyrihaximus', $json['extra'])
+            && is_array($json['extra']['wyrihaximus'])
+            && array_key_exists('supported-features', $json['extra']['wyrihaximus'])
+            && is_array($json['extra']['wyrihaximus']['supported-features'])
+        ) {
             foreach ($json['extra']['wyrihaximus']['supported-features'] as $feature => $featureSupported) {
                 if (! array_key_exists($feature, SupportedFeatures::DEFAULTS)) {
                     continue;
@@ -514,5 +605,34 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         }
 
         return $supportedFeatures;
+    }
+
+    /**
+     * @param array<mixed>  $array
+     * @param array<string> $keys
+     */
+    private static function getValueFromTree(array $array, array $keys): string
+    {
+        $current = $array;
+        foreach ($keys as $key) {
+            if (! is_array($current) || ! array_key_exists($key, $current)) {
+                return '0';
+            }
+
+            $current = $current[$key];
+        }
+
+        if (is_string($current) || is_int($current) || is_float($current)) {
+            return (string) $current;
+        }
+
+        return '0';
+    }
+
+    private static function cleanVersionToMajorMinor(string $version): string
+    {
+        [$major, $minor] = explode('.', $version);
+
+        return $major . '.' . $minor;
     }
 }
