@@ -14,9 +14,9 @@ Work on the contribution and check if it passes all QA checks with:
 
     make
 
-If some of the PHPStan or other checks are two strict that is fine, finish what you want to contribute and I'll help you with those, but please make sure you have unit tests and they are passing with:
+If some of the PHPStan or other checks are to strict or intimidating that is fine, finish what you want to contribute and I'll help you with those, but please make the following command passes. It runs a subset of everything:
 
-    make unit testing
+    make contrib
 
 Push to your fork and [submit a pull request][pr].
 
