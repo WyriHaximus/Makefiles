@@ -168,6 +168,21 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
         $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
 
+        $makefileContents = self::loadIncludes($io, $rootPackagePath, $referenceRoot, $makefileContents);
+        $makefileContents = self::injectTaskLists($makefileContents, $supportedFeatures);
+        $makefileContents = self::injectRequirementConditionals($makefileContents, $requiredPackagesAndExtensions);
+        $makefileContents = self::injectLowestVersions($makefileContents, $rootPackagePath);
+        $makefileContents = self::injectSupportedFeatures($makefileContents, $supportedFeatures);
+        $makefileContents = self::injectBase64Files($makefileContents);
+
+        file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
+
+        $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile took less than a second');
+    }
+
+    /** Replaces `include includes/*` directives with the contents of the referenced include files. */
+    private static function loadIncludes(IOInterface $io, string $rootPackagePath, string $referenceRoot, string $makefileContents): string
+    {
         $makefileContents = preg_replace_callback(
             '/include includes\/([a-zA-Z.]+)/',
             static fn (array $matches): string => $matches[1] === 'EXTRA.mk' ? self::loadInclude(
@@ -186,6 +201,17 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             throw new RuntimeException('Failed load in includes: ' . preg_last_error_msg());
         }
 
+        return $makefileContents;
+    }
+
+    /**
+     * Populates the aggregate task targets (all, ci-*, on-install-or-update) by scanning
+     * annotated targets and expands the `make-list(...)` / `task-list(...)` placeholders.
+     *
+     * @param array<string, bool> $supportedFeatures
+     */
+    private static function injectTaskLists(string $makefileContents, array $supportedFeatures): string
+    {
         $hashCountMap   = [
             2 => [
                 'all',
@@ -280,6 +306,17 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             $makefileContents = str_replace('task-list(' . $taskTarget . ')', '@echo "' . str_replace('"', '\"', $jsonTaskList) . '" ## Count: ' . count($taskList), $makefileContents);
         }
 
+        return $makefileContents;
+    }
+
+    /**
+     * Resolves `when_in_requirements(...)` placeholders to one of two values depending on whether
+     * any of the listed packages/extensions are present in the requirements.
+     *
+     * @param array<string> $requiredPackagesAndExtensions
+     */
+    private static function injectRequirementConditionals(string $makefileContents, array $requiredPackagesAndExtensions): string
+    {
         preg_match_all(
             '/([A-Z_]+)=when_in_requirements\(([A-Za-z0-9,\/\[\]\"-]+),\s+([A-Za-z0-9\"-]+),\s+([A-Za-z0-9,\"-]+)\)/',
             $makefileContents,
@@ -299,6 +336,12 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             );
         }
 
+        return $makefileContents;
+    }
+
+    /** Resolves `lowest_cleaned_version_in_tree_from_file(...)` placeholders to the major.minor version found at the given JSON path. */
+    private static function injectLowestVersions(string $makefileContents, string $rootPackagePath): string
+    {
         preg_match_all(
             '/([A-Z_]+)=lowest_cleaned_version_in_tree_from_file\(\"([A-Za-z0-9.-\/]+)\",\s+\"([A-Za-z0-9-.]+)\"\)/',
             $makefileContents,
@@ -334,6 +377,16 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             );
         }
 
+        return $makefileContents;
+    }
+
+    /**
+     * Expands the `supported-features(list)` and `supported-features(raw)` placeholders.
+     *
+     * @param array<string, bool> $supportedFeatures
+     */
+    private static function injectSupportedFeatures(string $makefileContents, array $supportedFeatures): string
+    {
         $supportedFeaturesList = array_keys(array_filter($supportedFeatures, static fn (bool $featureSupported): bool => $featureSupported));
         $supportedFeaturesJson = json_encode($supportedFeaturesList);
         if (! is_string($supportedFeaturesJson)) {
@@ -341,18 +394,29 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         }
 
         $makefileContents = str_replace('supported-features(list)', '@echo "' . str_replace('"', '\"', $supportedFeaturesJson) . '" ## Count: ' . count($supportedFeaturesList), $makefileContents);
-        $makefileContents = str_replace('supported-features(raw)', $supportedFeaturesJson, $makefileContents);
 
-        $base64FileContents = [];
-        foreach (glob(dirname(__FILE__, 3) . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'base64' . DIRECTORY_SEPARATOR . '*') as $file) {
-            $base64FileContents['base64(' . basename($file) . ')'] = base64_encode(file_get_contents($file));
+        return str_replace('supported-features(raw)', $supportedFeaturesJson, $makefileContents);
+    }
+
+    /** Replaces every `base64(<filename>)` placeholder with the base64 encoded contents of the matching file in etc/base64. */
+    private static function injectBase64Files(string $makefileContents): string
+    {
+        $files = glob(dirname(__FILE__, 3) . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'base64' . DIRECTORY_SEPARATOR . '*');
+        if (! is_array($files)) {
+            return $makefileContents;
         }
 
-        $makefileContents = str_replace(array_keys($base64FileContents), array_values($base64FileContents), $makefileContents);
+        $base64FileContents = [];
+        foreach ($files as $file) {
+            $fileContents = file_get_contents($file);
+            if (! is_string($fileContents)) {
+                continue;
+            }
 
-        file_put_contents($rootPackagePath . 'Makefile', $makefileContents);
+            $base64FileContents['base64(' . basename($file) . ')'] = base64_encode($fileContents);
+        }
 
-        $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile took less than a second');
+        return str_replace(array_keys($base64FileContents), array_values($base64FileContents), $makefileContents);
     }
 
     private static function loadInclude(IOInterface $io, string $makefilesPackageRoot, string $filename): string
@@ -380,8 +444,6 @@ final class Installer implements PluginInterface, EventSubscriberInterface
      */
     private static function retrieveRequiredPackagesAndExtensions(string $vendorDir, bool $includeDev): iterable
     {
-        $loader = new JsonLoader(new ArrayLoader());
-
         foreach (new GlobIterator($vendorDir . '/*/*/composer.json', FilesystemIterator::KEY_AS_FILENAME | FilesystemIterator::SKIP_DOTS) as $node) {
             assert($node instanceof SplFileInfo);
             $composerJson = file_get_contents($node->getRealPath());
