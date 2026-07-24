@@ -87,6 +87,9 @@ include includes/Renovate.Migrations.mk
 include includes/EXTRA.mk
 include includes/OnInstallUpdate.mk
 include includes/PHP.mk
-include includes/Shell.mk
+include includes/ContainerAccess.mk
 include includes/Help.mk
 include includes/TaskFinders.mk
+
+## Catch-all for targets that pass through extra arguments (e.g. `make run ls`)
+include includes/ExtraArguments.mk

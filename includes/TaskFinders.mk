@@ -1,3 +1,6 @@
+task-list-ci:
+	@echo "[]"
+
 task-list-ci-all: ## CI: Generate a JSON array of jobs to run on all variations
 	task-list(ci-all)
 
