@@ -121,7 +121,7 @@ final class InstallerTest extends TestCase
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Generating Makefile', $output);
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: All.mk', $output);
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: PHP.mk', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: Shell.mk', $output);
+        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: ContainerAccess.mk', $output);
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: Help.mk', $output);
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: TaskFinders.mk', $output);
         self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Generating Makefile took less than a second', $output);
