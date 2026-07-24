@@ -1,0 +1,4 @@
+{
+    "name": "dev-container",
+    "image": "ghcr.io\/wyrihaximusnet\/php:8.4-nts-alpine-slim-dev"
+}
