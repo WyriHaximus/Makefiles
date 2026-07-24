@@ -97,6 +97,7 @@ include includes/PHP.SupportedFeatures.Migrations.mk
 include includes/GitHub.Migrations.mk
 include includes/GitHub.Actions.Migrations.mk
 include includes/Renovate.Migrations.mk
+include includes/AI.Migrations.mk
 
 ## Our default jobs
 include includes/EXTRA.mk
