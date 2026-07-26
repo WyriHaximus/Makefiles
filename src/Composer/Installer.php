@@ -16,6 +16,7 @@ use GlobIterator;
 use RuntimeException;
 use SplFileInfo;
 
+use function array_any;
 use function array_filter;
 use function array_intersect;
 use function array_key_exists;
@@ -47,6 +48,7 @@ use function json_last_error_msg;
 use function preg_last_error_msg;
 use function preg_match;
 use function preg_match_all;
+use function preg_quote;
 use function preg_replace_callback;
 use function realpath;
 use function str_contains;
@@ -316,7 +318,76 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             $makefileContents = str_replace('task-list(' . $taskTarget . ')', '@echo "' . str_replace('"', '\"', $jsonTaskList) . '" ## Count: ' . count($taskList), $makefileContents);
         }
 
+        return self::injectAggregateDirectDockerFlags($makefileContents, $tasks);
+    }
+
+    /**
+     * Resolves `when_aggregate_has_direct_docker_tasks(...)` placeholders depending on whether any target
+     * in the given aggregate task list calls `docker` directly in its recipe.
+     *
+     * @param array<string, list<string>> $tasks
+     */
+    private static function injectAggregateDirectDockerFlags(string $makefileContents, array $tasks): string
+    {
+        preg_match_all(
+            '/([A-Z_]+)=when_aggregate_has_direct_docker_tasks\(([a-z-]+),\s+([A-Za-z0-9\"-]+),\s+([A-Za-z0-9,\"-]+)\)/',
+            $makefileContents,
+            $matches,
+            PREG_OFFSET_CAPTURE,
+        );
+
+        foreach ($matches[0] as $i => $fullLine) {
+            $taskKey = $matches[2][$i][0];
+            if (! array_key_exists($taskKey, $tasks)) {
+                throw new RuntimeException('Unknown task aggregate for direct docker detection: ' . $taskKey);
+            }
+
+            $hasDirectDockerTasks = array_any(
+                $tasks[$taskKey],
+                static fn (string $target): bool => self::targetCallsDockerDirectly($makefileContents, $target, []),
+            );
+            $makefileContents     = str_replace(
+                $fullLine[0],
+                $matches[1][$i][0] . '=' . ($hasDirectDockerTasks ? $matches[3][$i][0] : $matches[4][$i][0]),
+                $makefileContents,
+            );
+        }
+
         return $makefileContents;
+    }
+
+    /** @param list<string> $visited */
+    private static function targetCallsDockerDirectly(string $makefileContents, string $target, array $visited): bool
+    {
+        if (in_array($target, $visited, true)) {
+            return false;
+        }
+
+        $visited[] = $target;
+        $recipe    = self::extractTargetRecipe($makefileContents, $target);
+        if ($recipe === null) {
+            return false;
+        }
+
+        if (preg_match('/^\tdocker\b/m', $recipe) === 1) {
+            return true;
+        }
+
+        if (preg_match_all('/\$\(MAKE\)\s+([a-zA-Z0-9_-]+)/', $recipe, $subTargets) === false) {
+            return false;
+        }
+
+        return array_any($subTargets[1], static fn (string $subTarget): bool => self::targetCallsDockerDirectly($makefileContents, $subTarget, $visited));
+    }
+
+    private static function extractTargetRecipe(string $makefileContents, string $target): string|null
+    {
+        $pattern = '/^' . preg_quote($target, '/') . '(?:[^\n]*\n)((?:\t[^\n]*\n)*)/m';
+        if (preg_match($pattern, $makefileContents, $match) !== 1) {
+            return null;
+        }
+
+        return $match[1];
     }
 
     /** Expands the `help(...)` placeholders with pregenerated target listings for awk formatting. */
