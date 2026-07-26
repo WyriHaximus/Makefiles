@@ -51,7 +51,12 @@ backward-compatibility-check-raw: ## Check code for backwards incompatible chang
 	$(DOCKER_SHELL) vendor/bin/roave-backward-compatibility-check
 
 install: ### Install dependencies ####
+ifeq ("$(ON_INSTALL_OR_UPDATE_HAS_DIRECT_DOCKER_TASKS)","TRUE")
+	$(DOCKER_SHELL) composer install --no-scripts
+	$(MAKE) on-install-or-update
+else
 	$(DOCKER_SHELL) composer install
+endif
 
 composer-require: ### Require passed dependencies ####
 	$(DOCKER_INTERACTIVE_SHELL) composer require -W $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
@@ -63,7 +68,12 @@ composer-outdated: ### Show outdated packages ####
 	$(DOCKER_SHELL) composer outdated
 
 update: ### Update dependencies ####
+ifeq ("$(ON_INSTALL_OR_UPDATE_HAS_DIRECT_DOCKER_TASKS)","TRUE")
+	$(DOCKER_SHELL) composer update -W --no-scripts
+	$(MAKE) on-install-or-update
+else
 	$(DOCKER_SHELL) composer update -W
+endif
 
 update-lock: ### Update lockfile ####
 	$(DOCKER_RUN_WITHOUT_NETWORK_FOR_COMPOSER) composer update --lock --no-scripts || $(DOCKER_RUN) composer update --lock --no-scripts
