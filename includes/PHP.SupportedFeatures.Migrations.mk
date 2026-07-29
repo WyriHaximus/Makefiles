@@ -18,3 +18,6 @@ migrations-supported-features-php-ensure-no-phpcs-config-file-is-present-when-co
 
 migrations-supported-features-php-ensure-no-composer-require-checker-config-file-is-present-when-composer-dependency-checkers-are-disabled: #### Ensure we remove the Composer Require Checker config file when composer-dependency-checkers aren't enabled ##*I*##
 	($(DOCKER_RUN) php -r 'if (in_array("composer-dependency-checkers", supported-features(raw))) {exit;} @unlink("etc/qa/composer-require-checker.json");' || true)
+
+migrations-supported-features-php-ensure-no-composer-unused-config-file-is-present-when-composer-dependency-checkers-are-disabled: #### Ensure we remove the Composer Unused config file when composer-dependency-checkers aren't enabled ##*I*##
+	($(DOCKER_RUN) php -r 'if (in_array("composer-dependency-checkers", supported-features(raw))) {exit;} @unlink("etc/qa/composer-unused.php");' || true)
