@@ -15,3 +15,6 @@ migrations-supported-features-php-ensure-no-rector-config-file-is-present-when-c
 
 migrations-supported-features-php-ensure-no-phpcs-config-file-is-present-when-code-style-is-disabled: #### Ensure we remove the PHPCSS config file when code-style isn't enabled ##*I*##
 	($(DOCKER_RUN) php -r 'if (in_array("code-style", supported-features(raw))) {exit;} @unlink("etc/qa/phpcs.xml");' || true)
+
+migrations-supported-features-php-ensure-no-composer-require-checker-config-file-is-present-when-composer-dependency-checkers-are-disabled: #### Ensure we remove the Composer Require Checker config file when composer-dependency-checkers aren't enabled ##*I*##
+	($(DOCKER_RUN) php -r 'if (in_array("composer-dependency-checkers", supported-features(raw))) {exit;} @unlink("etc/qa/composer-require-checker.json");' || true)
