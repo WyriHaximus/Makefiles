@@ -45,6 +45,7 @@ use function is_string;
 use function json_decode;
 use function json_encode;
 use function json_last_error_msg;
+use function ltrim;
 use function preg_last_error_msg;
 use function preg_match;
 use function preg_match_all;
@@ -356,9 +357,24 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         return $makefileContents;
     }
 
-    /** @param list<string> $visited */
-    private static function targetCallsDockerDirectly(string $makefileContents, string $target, array $visited): bool
-    {
+    private const array DOCKER_FRAMEWORK_VARIABLES = [
+        'DOCKER_RUN',
+        'DOCKER_RUN_WITHOUT_NETWORK_FOR_COMPOSER',
+        'DOCKER_RUN_WITH_SOCKET',
+        'DOCKER_SHELL',
+        'DOCKER_INTERACTIVE_SHELL',
+    ];
+
+    /**
+     * @param list<string>        $visited
+     * @param array<string, true> $dockerWrapperVariables
+     */
+    private static function targetCallsDockerDirectly(
+        string $makefileContents,
+        string $target,
+        array $visited,
+        array $dockerWrapperVariables = [],
+    ): bool {
         if (in_array($target, $visited, true)) {
             return false;
         }
@@ -369,7 +385,15 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             return false;
         }
 
+        if ($dockerWrapperVariables === []) {
+            $dockerWrapperVariables = self::extractDockerWrapperVariables($makefileContents);
+        }
+
         if (preg_match('/^\tdocker\b/m', $recipe) === 1) {
+            return true;
+        }
+
+        if (self::recipeUsesDockerWrapperVariable($recipe, $dockerWrapperVariables)) {
             return true;
         }
 
@@ -377,7 +401,57 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             return false;
         }
 
-        return array_any($subTargets[1], static fn (string $subTarget): bool => self::targetCallsDockerDirectly($makefileContents, $subTarget, $visited));
+        return array_any(
+            $subTargets[1],
+            static fn (string $subTarget): bool => self::targetCallsDockerDirectly(
+                $makefileContents,
+                $subTarget,
+                $visited,
+                $dockerWrapperVariables,
+            ),
+        );
+    }
+
+    /** @return array<string, true> */
+    private static function extractDockerWrapperVariables(string $makefileContents): array
+    {
+        $variables = [];
+        if (
+            preg_match_all(
+                '/^([A-Z_][A-Z0-9_]*)(?:[:?+]?=)(.+)$/m',
+                $makefileContents,
+                $matches,
+            ) === false
+        ) {
+            return $variables;
+        }
+
+        foreach ($matches[1] as $i => $name) {
+            if (in_array($name, self::DOCKER_FRAMEWORK_VARIABLES, true)) {
+                continue;
+            }
+
+            if (preg_match('/^docker\b/', ltrim($matches[2][$i])) !== 1) {
+                continue;
+            }
+
+            $variables[$name] = true;
+        }
+
+        return $variables;
+    }
+
+    /** @param array<string, true> $dockerWrapperVariables */
+    private static function recipeUsesDockerWrapperVariable(string $recipe, array $dockerWrapperVariables): bool
+    {
+        if ($dockerWrapperVariables === []) {
+            return false;
+        }
+
+        $names = implode('|', array_map(static fn (string $name): string => preg_quote($name, '/'), array_keys($dockerWrapperVariables)));
+
+        return preg_match('/^\t\$\((?:' . $names . ')\)/m', $recipe) === 1
+            || preg_match('/^\t\$\{(?:' . $names . ')\}/m', $recipe) === 1;
     }
 
     private static function extractTargetRecipe(string $makefileContents, string $target): string|null
