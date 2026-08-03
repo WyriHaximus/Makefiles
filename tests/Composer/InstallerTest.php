@@ -7,81 +7,119 @@ namespace WyriHaximus\Tests\Makefiles\Composer;
 use Composer\Composer;
 use Composer\Config;
 use Composer\Factory;
-use Composer\IO\NullIO;
 use Composer\Package\RootPackage;
 use Composer\Repository\InstalledRepositoryInterface;
 use Composer\Repository\RepositoryManager;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
-use RuntimeException;
-use Symfony\Component\Console\Output\StreamOutput;
 use WyriHaximus\Makefiles\Composer\Installer;
+use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ComposerFixture;
+use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
 use WyriHaximus\TestUtilities\TestCase;
 
-use function closedir;
-use function copy;
+use function chmod;
 use function dirname;
-use function file_exists;
 use function file_get_contents;
-use function fopen;
-use function fseek;
-use function is_dir;
-use function is_file;
-use function is_resource;
+use function file_put_contents;
 use function mkdir;
-use function opendir;
-use function readdir;
-use function stream_get_contents;
 use function unlink;
 
 use const DIRECTORY_SEPARATOR;
+use const PHP_INT_MIN;
 
 final class InstallerTest extends TestCase
 {
+    /** @return list<string> */
+    private function generateOutputFragments(): array
+    {
+        return [
+            '<info>wyrihaximus/makefiles:</info> Supported features Matrix:',
+            '<info>wyrihaximus/makefiles:</info> composer-plugin: ✅',
+            '<info>wyrihaximus/makefiles:</info> unit-tests: ✅',
+            '<info>wyrihaximus/makefiles:</info> zts: ❌',
+            '<info>wyrihaximus/makefiles:</info> Generating Makefile',
+            '<info>wyrihaximus/makefiles:</info> Including: All.mk',
+            '<info>wyrihaximus/makefiles:</info> Including: PHP.mk',
+            '<info>wyrihaximus/makefiles:</info> Including: ContainerAccess.mk',
+            '<info>wyrihaximus/makefiles:</info> Including: Help.mk',
+            '<info>wyrihaximus/makefiles:</info> Including: TaskFinders.mk',
+            '<info>wyrihaximus/makefiles:</info> Generating Makefile took less than a second',
+        ];
+    }
+
+    #[Test]
+    public function getSubscribedEvents(): void
+    {
+        self::assertSame(
+            [ScriptEvents::PRE_AUTOLOAD_DUMP => ['findEventListeners', PHP_INT_MIN]],
+            Installer::getSubscribedEvents(),
+        );
+    }
+
+    /** @return iterable<string, array{string, bool, string, bool}> */
+    public static function provideEarlyReturnCases(): iterable
+    {
+        yield 'without composer json' => ['no-composer', false, '', false];
+        yield 'invalid composer json' => ['invalid-json', true, 'not-json', false];
+        yield 'without makefiles dependency' => ['no-makefiles', true, '{"name":"example/no-makefiles","require-dev":{"php":"^8.4"}}', false];
+        yield 'unreadable composer json' => ['unreadable-json', true, '{}', true];
+    }
+
+    #[Test]
+    #[DataProvider('provideEarlyReturnCases')]
+    public function findEventListenersReturnsEarly(string $suffix, bool $writeComposerJson, string $composerJson, bool $restorePermissions): void
+    {
+        if ($restorePermissions && ! ProjectSandbox::canSimulateUnreadableFiles()) {
+            self::markTestSkipped('File permission tests cannot run as root.');
+        }
+
+        ['vendorDir' => $vendorDir, 'makeFilePath' => $makeFilePath] = $this->seedProject($suffix, $writeComposerJson, $composerJson);
+
+        try {
+            Installer::findEventListeners(ComposerFixture::event($vendorDir));
+            self::assertFileDoesNotExist($makeFilePath);
+        } finally {
+            if ($restorePermissions) {
+                chmod(dirname($makeFilePath) . '/composer.json', 0644);
+            }
+        }
+    }
+
+    #[Test]
+    public function findEventListenersGeneratesMakefileForConsumerProject(): void
+    {
+        $root      = $this->getTmpDir() . 'consumer/';
+        $vendorDir = $root . 'vendor/';
+        mkdir($vendorDir . 'wyrihaximus/makefiles', 0755, true);
+        ProjectSandbox::mirrorPackage(ProjectSandbox::packageSourceRoot() . DIRECTORY_SEPARATOR, $vendorDir . 'wyrihaximus/makefiles/');
+        file_put_contents(
+            $root . 'composer.json',
+            '{"name":"example/consumer","require-dev":{"wyrihaximus/makefiles":"dev-main","php":"^8.4"}}',
+        );
+
+        Installer::findEventListeners(ComposerFixture::event($vendorDir));
+
+        self::assertFileExists($root . 'Makefile');
+    }
+
     #[Test]
     public function generate(): void
     {
-        $vendorDir = $this->getTmpDir() . 'vendor' . DIRECTORY_SEPARATOR;
+        $projectRoot = ProjectSandbox::mirroredProject($this->getTmpDir());
+        $vendorDir   = $projectRoot . 'vendor';
         mkdir($vendorDir);
-        $this->recurseCopy(dirname(__DIR__, 2) . DIRECTORY_SEPARATOR, $this->getTmpDir());
+
+        $io             = ProjectSandbox::capturingIo();
         $composerConfig = new Config();
-        $composerConfig->merge([
-            'config' => ['vendor-dir' => $vendorDir],
-        ]);
+        $composerConfig->merge(['config' => ['vendor-dir' => $vendorDir]]);
         $rootPackage = new RootPackage('wyrihaximus/makefiles', 'dev-main', 'dev-main');
         $rootPackage->setAutoload([
-            'classmap' => ['dummy/event','dummy/listener/Listener.php'],
+            'classmap' => ['dummy/event', 'dummy/listener/Listener.php'],
             'psr-4' => ['WyriHaximus\\Makefiles\\' => 'src'],
         ]);
-
-        $io         = new class () extends NullIO {
-            private readonly StreamOutput $output;
-
-            public function __construct()
-            {
-                $stream = fopen('php://memory', 'rw');
-                if (! is_resource($stream)) {
-                    throw new RuntimeException('Failed to open stream');
-                }
-
-                $this->output = new StreamOutput($stream, decorated: false);
-            }
-
-            public function output(): string
-            {
-                fseek($this->output->getStream(), 0);
-
-                return stream_get_contents($this->output->getStream());
-            }
-
-            /** @inheritDoc */
-            public function write($messages, bool $newline = true, int $verbosity = self::NORMAL): void
-            {
-                $this->output->write($messages, $newline, $verbosity & StreamOutput::OUTPUT_RAW);
-            }
-        };
         $repository = Mockery::mock(InstalledRepositoryInterface::class);
         $repository->allows()->getCanonicalPackages()->andReturn([]);
         $repositoryManager = new RepositoryManager($io, $composerConfig, Factory::createHttpDownloader($io, $composerConfig));
@@ -90,69 +128,49 @@ final class InstallerTest extends TestCase
         $composer->setConfig($composerConfig);
         $composer->setRepositoryManager($repositoryManager);
         $composer->setPackage($rootPackage);
-        $event = new Event(
-            ScriptEvents::PRE_AUTOLOAD_DUMP,
-            $composer,
-            $io,
-        );
+        $event = new Event(ScriptEvents::PRE_AUTOLOAD_DUMP, $composer, $io);
 
         $installer = new Installer();
-
-        // Test dead methods and make Infection happy
         $installer->activate($composer, $io);
         $installer->deactivate($composer, $io);
         $installer->uninstall($composer, $io);
 
-        $makefilePath             = $this->getTmpDir() . 'Makefile';
+        $makefilePath = $projectRoot . 'Makefile';
+        Installer::findEventListeners($event);
         $expectedMakeFileContents = file_get_contents($makefilePath);
+        self::assertIsString($expectedMakeFileContents);
         unlink($makefilePath);
-
         self::assertFileDoesNotExist($makefilePath);
 
-        // Do the actual generating
+        $io    = ProjectSandbox::capturingIo();
+        $event = new Event(ScriptEvents::PRE_AUTOLOAD_DUMP, $composer, $io);
         Installer::findEventListeners($event);
 
-        $output = $io->output();
-
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Supported features Matrix:', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> composer-plugin: ✅', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> unit-tests: ✅', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> zts: ❌', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Generating Makefile', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: All.mk', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: PHP.mk', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: ContainerAccess.mk', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: Help.mk', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Including: TaskFinders.mk', $output);
-        self::assertStringContainsString('<info>wyrihaximus/makefiles:</info> Generating Makefile took less than a second', $output);
+        foreach ($this->generateOutputFragments() as $fragment) {
+            self::assertStringContainsString($fragment, $io->output());
+        }
 
         self::assertFileExists($makefilePath);
-        self::assertSame(file_get_contents($makefilePath), $expectedMakeFileContents);
+        self::assertSame($expectedMakeFileContents, file_get_contents($makefilePath));
     }
 
-    private function recurseCopy(string $src, string $dst): void
+    /** @return array{vendorDir: string, makeFilePath: string} */
+    private function seedProject(string $suffix, bool $writeComposerJson, string $composerJson): array
     {
-        $dir = opendir($src);
-        if (! is_resource($dir)) {
-            throw new RuntimeException('Failed to open directory');
-        }
+        $root      = $this->getTmpDir() . $suffix . '/';
+        $vendorDir = $root . 'vendor/';
+        mkdir($vendorDir, 0755, true);
 
-        if (! file_exists($dst)) {
-            mkdir($dst);
-        }
-
-        while (( $file = readdir($dir)) !== false) {
-            if (( $file === '.' ) || ( $file === '..' )) {
-                continue;
-            }
-
-            if (is_dir($src . '/' . $file)) {
-                $this->recurseCopy($src . '/' . $file, $dst . '/' . $file);
-            } elseif (is_file($src . '/' . $file)) {
-                copy($src . '/' . $file, $dst . '/' . $file);
+        if ($writeComposerJson) {
+            file_put_contents($root . 'composer.json', $composerJson);
+            if ($composerJson === '{}') {
+                chmod($root . 'composer.json', 0000);
             }
         }
 
-        closedir($dir);
+        return [
+            'vendorDir' => $vendorDir,
+            'makeFilePath' => ($suffix === 'no-composer' ? dirname($vendorDir) : $root) . DIRECTORY_SEPARATOR . 'Makefile',
+        ];
     }
 }

@@ -6,8 +6,8 @@ namespace WyriHaximus\Tests\Makefiles\Composer;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionMethod;
-use WyriHaximus\Makefiles\Composer\Installer;
+use WyriHaximus\Makefiles\Composer\Installer\DirectDockerDetector;
+use WyriHaximus\Makefiles\Composer\Installer\ExtraServicesInjector;
 use WyriHaximus\TestUtilities\TestCase;
 
 use function dirname;
@@ -36,7 +36,7 @@ final class ExtraServicesDetectionTest extends TestCase
 
         file_put_contents($etcDir . 'Makefile', $etcMakefileContents);
 
-        $result = $this->invokeInjectExtraServicesFlag($templateContents, $rootPackagePath);
+        $result = ExtraServicesInjector::inject($templateContents, $rootPackagePath);
 
         self::assertStringContainsString('HAS_EXTRA_SERVICES=' . $expectedHasExtraServices, $result);
         self::assertStringNotContainsString('when_target_exists_in_extra', $result);
@@ -48,7 +48,7 @@ final class ExtraServicesDetectionTest extends TestCase
         $rootPackagePath = $this->getTmpDir();
         $template        = "HAS_EXTRA_SERVICES=when_target_exists_in_extra(extra-services-up, TRUE, FALSE)\n";
 
-        $result = $this->invokeInjectExtraServicesFlag($template, $rootPackagePath);
+        $result = ExtraServicesInjector::inject($template, $rootPackagePath);
 
         self::assertStringContainsString('HAS_EXTRA_SERVICES=FALSE', $result);
         self::assertStringNotContainsString('when_target_exists_in_extra', $result);
@@ -95,7 +95,7 @@ ALL_HAS_DIRECT_DOCKER_TASKS=FALSE
 CONTRIB_HAS_DIRECT_DOCKER_TASKS=FALSE
 MAKEFILE;
 
-        $result = $this->invokeInjectExtraServicesDirectDockerFlags($input);
+        $result = DirectDockerDetector::injectExtraServicesDirectDockerFlags($input);
 
         self::assertStringContainsString('ALL_HAS_DIRECT_DOCKER_TASKS=TRUE', $result);
         self::assertStringContainsString('CONTRIB_HAS_DIRECT_DOCKER_TASKS=TRUE', $result);
@@ -109,28 +109,8 @@ HAS_EXTRA_SERVICES=FALSE
 ALL_HAS_DIRECT_DOCKER_TASKS=FALSE
 MAKEFILE;
 
-        $result = $this->invokeInjectExtraServicesDirectDockerFlags($input);
+        $result = DirectDockerDetector::injectExtraServicesDirectDockerFlags($input);
 
         self::assertStringContainsString('ALL_HAS_DIRECT_DOCKER_TASKS=FALSE', $result);
-    }
-
-    private function invokeInjectExtraServicesDirectDockerFlags(string $makefileContents): string
-    {
-        $method = new ReflectionMethod(Installer::class, 'injectExtraServicesDirectDockerFlags');
-
-        /** @var string $result */
-        $result = $method->invoke(null, $makefileContents);
-
-        return $result;
-    }
-
-    private function invokeInjectExtraServicesFlag(string $makefileContents, string $rootPackagePath): string
-    {
-        $method = new ReflectionMethod(Installer::class, 'injectExtraServicesFlag');
-
-        /** @var string $result */
-        $result = $method->invoke(null, $makefileContents, $rootPackagePath);
-
-        return $result;
     }
 }
