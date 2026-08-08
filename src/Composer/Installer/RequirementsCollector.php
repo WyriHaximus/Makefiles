@@ -15,6 +15,7 @@ use function array_key_exists;
 use function array_keys;
 use function array_unique;
 use function array_values;
+use function assert;
 use function file_get_contents;
 use function is_array;
 use function is_dir;
@@ -23,6 +24,8 @@ use function is_readable;
 use function is_string;
 use function iterator_to_array;
 use function json_decode;
+use function rtrim;
+use function str_replace;
 
 final class RequirementsCollector
 {
@@ -68,20 +71,18 @@ final class RequirementsCollector
      */
     private static function retrieveRequiredPackagesAndExtensions(string $vendorDir, bool $includeDev): iterable
     {
-        foreach (new GlobIterator($vendorDir . '/*/*/composer.json', FilesystemIterator::KEY_AS_FILENAME | FilesystemIterator::SKIP_DOTS) as $node) {
-            if (! $node instanceof SplFileInfo) {
-                continue;
-            }
+        // GlobIterator requires forward slashes; vendor-dir uses backslashes on Windows.
+        $composerJsonGlobPattern = str_replace('\\', '/', rtrim($vendorDir, '/\\')) . '/*/*/composer.json';
 
+        foreach (new GlobIterator($composerJsonGlobPattern, FilesystemIterator::KEY_AS_FILENAME | FilesystemIterator::SKIP_DOTS) as $node) {
+            /** @var SplFileInfo $node */
             $realPath = $node->getRealPath();
-            if (! is_file($realPath) || ! is_readable($realPath)) {
+            if ($realPath === false || ! is_file($realPath) || ! is_readable($realPath)) {
                 continue;
             }
 
             $composerJson = file_get_contents($realPath);
-            if ($composerJson === false) {
-                continue;
-            }
+            assert(is_string($composerJson));
 
             $json = json_decode($composerJson, true);
             if (! is_array($json)) {

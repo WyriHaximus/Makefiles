@@ -13,12 +13,15 @@ use WyriHaximus\Makefiles\Composer\Installer\Requirements;
 use WyriHaximus\Makefiles\Composer\SupportedFeatures;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\CapturingNullIO;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
+use function chmod;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
 use function str_contains;
+
+use const DIRECTORY_SEPARATOR;
 
 final class MakefileGeneratorTest extends TestCase
 {
@@ -120,22 +123,108 @@ MAKEFILE);
     }
 
     #[Test]
-    public function makefilePathAcceptsUnixAbsoluteRootWithoutTrailingSeparator(): void
+    public function generateReplacesExistingMakefile(): void
     {
-        $method = new ReflectionMethod(MakefileGenerator::class, 'makefilePath');
-        self::assertSame(
-            '/tmp/project/Makefile',
-            $method->invoke(null, '/tmp/project'),
+        ['root' => $root, 'reference' => $reference] = ProjectSandbox::createStubReferenceRoot($this->getTmpDir());
+        file_put_contents($root . 'composer.json', '{"config":{"platform":{"php":"8.4.13"}}}');
+        file_put_contents($reference . 'templates/Makefile.PHP', "alpha: ## Alpha ####\n");
+        $context = ProjectSandbox::context(
+            $root,
+            $reference,
+            new Requirements(['php'], ['php']),
+            SupportedFeatures::DEFAULTS,
         );
+
+        MakefileGenerator::generate($context);
+        MakefileGenerator::generate($context);
+
+        self::assertFileExists($root . 'Makefile');
     }
 
     #[Test]
-    public function makefilePathAcceptsWindowsAbsoluteRoot(): void
+    public function generateReturnsEarlyWhenTemplateCannotBeRead(): void
+    {
+        if (! ProjectSandbox::canSimulateUnreadableFiles()) {
+            self::markTestSkipped('File permission tests cannot run as root.');
+        }
+
+        ['root' => $root, 'reference' => $reference] = ProjectSandbox::createStubReferenceRoot($this->getTmpDir());
+        $templatePath                                = $reference . 'templates/Makefile.PHP';
+        file_put_contents($templatePath, 'template');
+        chmod($templatePath, 0000);
+
+        try {
+            MakefileGenerator::generate(ProjectSandbox::context($root, $reference));
+            self::assertFalse(file_exists($root . 'Makefile'));
+        } finally {
+            chmod($templatePath, 0644);
+        }
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function provideMakefilePathSuccessCases(): iterable
+    {
+        yield 'unix absolute root without trailing separator' => [
+            '/tmp/project',
+            '/tmp/project/Makefile',
+        ];
+
+        yield 'windows absolute root with backslashes' => [
+            'D:\\a\\Makefiles\\Makefiles\\',
+            'D:\\a\\Makefiles\\Makefiles\\Makefile',
+        ];
+
+        if (DIRECTORY_SEPARATOR === '\\') {
+            yield 'drive path without slashes on windows' => [
+                'D:\\project',
+                'D:\\project\\Makefile',
+            ];
+
+            return;
+        }
+
+        yield 'drive path without slashes on unix' => [
+            'D:project',
+            'D:project/Makefile',
+        ];
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function provideMakefilePathRejectionCases(): iterable
+    {
+        yield 'relative root' => ['tmp-relative-root/'];
+    }
+
+    /** @return iterable<string, array{string, bool}> */
+    public static function provideIsAbsolutePathCases(): iterable
+    {
+        yield 'empty path' => ['', false];
+    }
+
+    #[Test]
+    #[DataProvider('provideMakefilePathRejectionCases')]
+    public function makefilePathRejectsUnsafeRoot(string $rootPackagePath): void
     {
         $method = new ReflectionMethod(MakefileGenerator::class, 'makefilePath');
-        self::assertSame(
-            'D:\\a\\Makefiles\\Makefiles\\Makefile',
-            $method->invoke(null, 'D:\\a\\Makefiles\\Makefiles\\'),
-        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageIsOrContains('Refusing to write Makefile to an unsafe root package path.');
+        $method->invoke(null, $rootPackagePath);
+    }
+
+    #[Test]
+    #[DataProvider('provideMakefilePathSuccessCases')]
+    public function makefilePath(string $rootPackagePath, string $expectedPath): void
+    {
+        $method = new ReflectionMethod(MakefileGenerator::class, 'makefilePath');
+        self::assertSame($expectedPath, $method->invoke(null, $rootPackagePath));
+    }
+
+    #[Test]
+    #[DataProvider('provideIsAbsolutePathCases')]
+    public function isAbsolutePath(string $path, bool $expected): void
+    {
+        $method = new ReflectionMethod(MakefileGenerator::class, 'isAbsolutePath');
+        self::assertSame($expected, $method->invoke(null, $path));
     }
 }

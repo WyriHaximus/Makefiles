@@ -10,16 +10,17 @@ use Throwable;
 use WyriHaximus\Makefiles\Composer\Installer\RequirementsCollector;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ComposerFixture;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function chmod;
 use function file_exists;
 use function file_put_contents;
 use function mkdir;
+use function symlink;
 
 final class RequirementsCollectorTest extends TestCase
 {
-    /** @return iterable<string, array{callable(self): string, list<string>, list<string>, bool}> */
+    /** @return iterable<string, array{callable(self): string, list<string>, list<string>, bool, bool}> */
     public static function provideCollectCases(): iterable
     {
         yield 'merges root and vendor requirements' => [
@@ -34,6 +35,7 @@ final class RequirementsCollectorTest extends TestCase
             ['php', 'root/dev', 'vendor/pkg', 'vendor/dev-pkg'],
             ['php', 'root/dev', 'vendor/pkg'],
             false,
+            false,
         ];
 
         yield 'skips invalid vendor json' => [
@@ -47,6 +49,7 @@ final class RequirementsCollectorTest extends TestCase
             },
             ['php'],
             ['php'],
+            false,
             false,
         ];
 
@@ -63,6 +66,51 @@ final class RequirementsCollectorTest extends TestCase
             },
             ['php'],
             ['php'],
+            true,
+            false,
+        ];
+
+        yield 'vendor package without require-dev' => [
+            static function (self $test): string {
+                $root      = $test->getTmpDir() . 'no-require-dev/';
+                $vendorDir = $root . 'vendor/';
+                mkdir($vendorDir . 'foo/bar', 0755, true);
+                file_put_contents($vendorDir . 'foo/bar/composer.json', '{"require":{"only/pkg":"^1"}}');
+
+                return $vendorDir;
+            },
+            ['php', 'only/pkg'],
+            ['php', 'only/pkg'],
+            false,
+            false,
+        ];
+
+        yield 'skips vendor composer.json directory' => [
+            static function (self $test): string {
+                $root      = $test->getTmpDir() . 'composer-json-directory/';
+                $vendorDir = $root . 'vendor/';
+                mkdir($vendorDir . 'foo/bar/composer.json', 0755, true);
+
+                return $vendorDir;
+            },
+            ['php'],
+            ['php'],
+            false,
+            false,
+        ];
+
+        yield 'skips broken vendor json symlink' => [
+            static function (self $test): string {
+                $root      = $test->getTmpDir() . 'broken-vendor-json/';
+                $vendorDir = $root . 'vendor/';
+                mkdir($vendorDir . 'foo/bar', 0755, true);
+                symlink($root . 'missing-composer.json', $vendorDir . 'foo/bar/composer.json');
+
+                return $vendorDir;
+            },
+            ['php'],
+            ['php'],
+            false,
             true,
         ];
     }
@@ -81,10 +129,14 @@ final class RequirementsCollectorTest extends TestCase
      */
     #[Test]
     #[DataProvider('provideCollectCases')]
-    public function collect(callable $setup, array $expectedAll, array $expectedWithoutDev, bool $requiresUnreadablePermissions): void
+    public function collect(callable $setup, array $expectedAll, array $expectedWithoutDev, bool $requiresUnreadablePermissions, bool $requiresSymlinks): void
     {
         if ($requiresUnreadablePermissions && ! ProjectSandbox::canSimulateUnreadableFiles()) {
-            self::markTestSkipped('File permission tests cannot run as root.');
+            self::markTestSkipped('File permission tests cannot run on Windows or as root.');
+        }
+
+        if ($requiresSymlinks && ! ProjectSandbox::canCreateSymlinks()) {
+            self::markTestSkipped('Symlink tests cannot run when symlink creation is unavailable.');
         }
 
         $vendorDir = $setup($this);

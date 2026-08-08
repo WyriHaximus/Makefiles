@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use WyriHaximus\Makefiles\Composer\Installer\DirectDockerDetector;
 use WyriHaximus\Makefiles\Composer\Installer\ExtraServicesInjector;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function dirname;
 use function file_get_contents;

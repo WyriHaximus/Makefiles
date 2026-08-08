@@ -6,14 +6,19 @@ namespace WyriHaximus\Makefiles\Composer\Installer;
 
 use RuntimeException;
 
+use function assert;
+use function dirname;
 use function file_get_contents;
 use function file_put_contents;
-use function getcwd;
 use function is_file;
+use function is_readable;
 use function is_string;
+use function rename;
 use function rtrim;
 use function str_contains;
 use function strlen;
+use function uniqid;
+use function unlink;
 
 use const DIRECTORY_SEPARATOR;
 
@@ -31,14 +36,12 @@ final class MakefileGenerator
         }
 
         $templatePath = $context->referenceRoot . 'templates' . DIRECTORY_SEPARATOR . 'Makefile.PHP';
-        if (! is_file($templatePath)) {
+        if (! is_file($templatePath) || ! is_readable($templatePath)) {
             return;
         }
 
         $makefileContents = file_get_contents($templatePath);
-        if (! is_string($makefileContents)) {
-            return;
-        }
+        assert(is_string($makefileContents));
 
         $context->io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
 
@@ -52,22 +55,37 @@ final class MakefileGenerator
         $makefileContents = SupportedFeaturesInjector::inject($makefileContents, $context->supportedFeatures);
         $makefileContents = Base64FileInjector::inject($makefileContents);
 
-        file_put_contents(self::makefilePath($context->rootPackagePath), $makefileContents);
+        self::writeMakefile(self::makefilePath($context->rootPackagePath), $makefileContents);
 
         $context->io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile took less than a second');
     }
 
+    private static function writeMakefile(string $path, string $contents): void
+    {
+        $directory     = dirname($path);
+        $temporaryPath = $directory . DIRECTORY_SEPARATOR . '.Makefile.' . uniqid('', true) . '.tmp';
+        $written       = file_put_contents($temporaryPath, $contents);
+        assert($written === strlen($contents));
+
+        if (is_file($path)) {
+            unlink($path);
+        }
+
+        assert(rename($temporaryPath, $path));
+    }
+
     private static function makefilePath(string $rootPackagePath): string
     {
-        if ($rootPackagePath === '') {
+        if ($rootPackagePath === '' || ! self::isAbsolutePath($rootPackagePath)) {
             throw new RuntimeException('Refusing to write Makefile to an unsafe root package path.');
         }
 
-        if (! self::isAbsolutePath($rootPackagePath)) {
-            $rootPackagePath = getcwd() . DIRECTORY_SEPARATOR . $rootPackagePath;
+        $separator = DIRECTORY_SEPARATOR;
+        if (str_contains($rootPackagePath, '\\')) {
+            $separator = '\\';
+        } elseif (str_contains($rootPackagePath, '/')) {
+            $separator = '/';
         }
-
-        $separator = str_contains($rootPackagePath, '\\') ? '\\' : DIRECTORY_SEPARATOR;
 
         return rtrim($rootPackagePath, '/\\') . $separator . 'Makefile';
     }
@@ -78,7 +96,7 @@ final class MakefileGenerator
             return false;
         }
 
-        if ($path[0] === DIRECTORY_SEPARATOR) {
+        if ($path[0] === '/' || $path[0] === DIRECTORY_SEPARATOR) {
             return true;
         }
 

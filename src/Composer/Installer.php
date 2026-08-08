@@ -17,12 +17,14 @@ use WyriHaximus\Makefiles\Composer\Installer\SupportedFeaturesResolver;
 
 use function array_key_exists;
 use function array_keys;
+use function assert;
 use function dirname;
 use function file_exists;
 use function file_get_contents;
 use function is_array;
 use function is_file;
 use function is_readable;
+use function is_string;
 use function json_decode;
 
 use const DIRECTORY_SEPARATOR;
@@ -72,9 +74,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         }
 
         $jsonRaw = file_get_contents($composerJsonPath);
-        if ($jsonRaw === false) {
-            return;
-        }
+        assert(is_string($jsonRaw));
 
         $json = json_decode($jsonRaw, true);
         if (! is_array($json)) {

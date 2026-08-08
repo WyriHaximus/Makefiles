@@ -10,7 +10,7 @@ use WyriHaximus\Makefiles\Composer\Installer\Requirements;
 use WyriHaximus\Makefiles\Composer\Installer\TaskListInjector;
 use WyriHaximus\Makefiles\Composer\SupportedFeatures;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
 final class TaskListInjectorTest extends TestCase
 {

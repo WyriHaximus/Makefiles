@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 use WyriHaximus\Makefiles\Composer\Installer\MakefileGenerationContext;
 use WyriHaximus\Makefiles\Composer\Installer\Requirements;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function basename;
 use function class_exists;

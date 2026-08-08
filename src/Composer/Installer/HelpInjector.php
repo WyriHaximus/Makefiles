@@ -33,7 +33,7 @@ final class HelpInjector
         ];
 
         preg_match_all(
-            '/^([a-zA-Z0-9_-]+):.*?## .+$/m',
+            '/^([a-zA-Z0-9_-]+):.*?## (.+)$/m',
             $makefileContents,
             $matches,
         );
@@ -43,17 +43,13 @@ final class HelpInjector
                 continue;
             }
 
-            if (preg_match('/^([^:]+):.*?## (.+)$/', $fullLine, $parts) !== 1) {
-                continue;
-            }
-
             $target         = $matches[1][$i];
-            $haspos         = strpos($parts[2], '#');
+            $haspos         = strpos($matches[2][$i], '#');
             $helpLine       = trim(
                 $target . ': ## ' . substr(
-                    $parts[2],
+                    $matches[2][$i],
                     0,
-                    $haspos !== false ? $haspos : strlen($parts[2]),
+                    $haspos !== false ? $haspos : strlen($matches[2][$i]),
                 ),
             );
             $isMigration    = str_starts_with($target, 'migrations-');

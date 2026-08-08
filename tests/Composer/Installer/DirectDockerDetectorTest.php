@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use WyriHaximus\Makefiles\Composer\Installer\DirectDockerDetector;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
 final class DirectDockerDetectorTest extends TestCase
 {
@@ -68,6 +68,24 @@ final class DirectDockerDetectorTest extends TestCase
             "update-k6-repositories: ## update ##*I*##\n\tphp bin/update-k6-repositories.php\n",
             'update-k6-repositories',
             false,
+        ];
+
+        yield 'empty recipe returns false' => [
+            "empty-recipe: ## empty ##*I*##\nother-target: ## other ##\n\techo other\n",
+            'empty-recipe',
+            false,
+        ];
+
+        yield 'target at eof with no recipe' => [
+            "solo-target: ## solo ##*I*##\n",
+            'solo-target',
+            false,
+        ];
+
+        yield 'recipe after comment lines' => [
+            "commented-recipe: ## recipe ##*I*##\n# prepare\n\tdocker run --rm image cmd\n",
+            'commented-recipe',
+            true,
         ];
 
         yield 'service lifecycle ifeq block recurses to docker compose' => [

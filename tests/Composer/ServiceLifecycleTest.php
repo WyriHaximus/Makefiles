@@ -7,7 +7,7 @@ namespace WyriHaximus\Tests\Makefiles\Composer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use WyriHaximus\Makefiles\Composer\Installer\ServiceLifecycleInjector;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function str_replace;
 
