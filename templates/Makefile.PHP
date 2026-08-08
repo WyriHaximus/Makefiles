@@ -10,6 +10,7 @@ SLIM_DOCKER_IMAGE=when_in_requirements(["ext-gd","ext-vips"], "", "-slim")
 NTS_OR_ZTS_DOCKER_IMAGE=when_in_requirements(["ext-parallel"], "zts", "nts")
 OTEL_PHP_FIBERS_ENABLED=when_in_requirements(["ext-parallel"], false, true)
 NEEDS_DOCKER_SOCKET=when_in_requirements(["testcontainers/testcontainers"], TRUE, FALSE)
+HAS_EXTRA_SERVICES=when_target_exists_in_extra(extra-services-up, TRUE, FALSE)
 ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)
 CONTRIB_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(contrib, TRUE, FALSE)
 ON_INSTALL_OR_UPDATE_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(on-install-or-update, TRUE, FALSE)
@@ -23,6 +24,12 @@ ifneq ("$(wildcard /.you-are-in-a-wyrihaximus.net-php-docker-image)","")
     IN_DOCKER=TRUE
 else
     IN_DOCKER=FALSE
+endif
+
+ifeq ("$(GITHUB_ACTIONS)","true")
+    IN_CI=TRUE
+else
+    IN_CI=FALSE
 endif
 
 ifeq ("$(IN_DOCKER)","TRUE")

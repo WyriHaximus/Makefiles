@@ -50,6 +50,7 @@ use function preg_last_error_msg;
 use function preg_match;
 use function preg_match_all;
 use function preg_quote;
+use function preg_replace;
 use function preg_replace_callback;
 use function realpath;
 use function str_contains;
@@ -179,6 +180,8 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
 
         $makefileContents = self::loadIncludes($io, $rootPackagePath, $referenceRoot, $makefileContents);
+        $makefileContents = self::injectExtraServicesFlag($makefileContents, $rootPackagePath);
+        $makefileContents = self::injectServiceLifecycle($makefileContents, $rootPackagePath);
         $makefileContents = self::injectTaskLists($makefileContents, $supportedFeatures);
         $makefileContents = self::injectHelp($makefileContents);
         $makefileContents = self::injectRequirementConditionals($makefileContents, $requiredPackagesAndExtensions);
@@ -213,6 +216,162 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         }
 
         return $makefileContents;
+    }
+
+    /**
+     * Resolves `when_target_exists_in_extra(...)` placeholders depending on whether the package
+     * defines the given target in `etc/Makefile`.
+     */
+    private static function injectExtraServicesFlag(string $makefileContents, string $rootPackagePath): string
+    {
+        preg_match_all(
+            '/([A-Z_]+)=when_target_exists_in_extra\(([a-z0-9-]+),\s+([A-Za-z0-9\"-]+),\s+([A-Za-z0-9,\"-]+)\)/',
+            $makefileContents,
+            $matches,
+            PREG_OFFSET_CAPTURE,
+        );
+
+        if ($matches[0] === []) {
+            return $makefileContents;
+        }
+
+        $etcMakefilePath = $rootPackagePath . 'etc' . DIRECTORY_SEPARATOR . 'Makefile';
+        $etcMakefile     = is_file($etcMakefilePath) ? file_get_contents($etcMakefilePath) : false;
+
+        foreach ($matches[0] as $i => $fullLine) {
+            $targetName = $matches[2][$i][0];
+            $hasTarget  = is_string($etcMakefile)
+                && preg_match('/^' . preg_quote($targetName, '/') . ':/m', $etcMakefile) === 1;
+
+            $makefileContents = str_replace(
+                $fullLine[0],
+                $matches[1][$i][0] . '=' . ($hasTarget ? $matches[3][$i][0] : $matches[4][$i][0]),
+                $makefileContents,
+            );
+        }
+
+        return $makefileContents;
+    }
+
+    /**
+     * Expands `service_start(target)` / `service_cleanup(target)` placeholders into a bash recipe
+     * with EXIT trap when the named targets exist in the compiled Makefile.
+     */
+    private static function injectServiceLifecycle(string $makefileContents, string $rootPackagePath): string
+    {
+        if (! str_contains($makefileContents, 'service_start(') && ! str_contains($makefileContents, 'service_cleanup(')) {
+            return $makefileContents;
+        }
+
+        $availableTargets = self::extractMakefileTargets($makefileContents);
+
+        $lines  = explode("\n", $makefileContents);
+        $output = [];
+        $count  = count($lines);
+        $index  = 0;
+
+        while ($index < $count) {
+            $line = $lines[$index];
+
+            if (preg_match('/^([a-z0-9-]+):/', $line) !== 1) {
+                $output[] = $line;
+                $index++;
+
+                continue;
+            }
+
+            $targetLine = $line;
+            $index++;
+            $recipeLines = [];
+
+            while ($index < $count && str_starts_with($lines[$index], "\t")) {
+                $recipeLines[] = $lines[$index];
+                $index++;
+            }
+
+            $recipeBody = implode("\n", $recipeLines);
+
+            if (! str_contains($recipeBody, 'service_start(') && ! str_contains($recipeBody, 'service_cleanup(')) {
+                $output[] = $targetLine;
+                foreach ($recipeLines as $recipeLine) {
+                    $output[] = $recipeLine;
+                }
+
+                continue;
+            }
+
+            $output[] = $targetLine;
+            $output[] = self::expandServiceLifecycleRecipe($recipeLines, $availableTargets);
+        }
+
+        return implode("\n", $output);
+    }
+
+    /**
+     * @param list<string> $recipeLines
+     * @param list<string> $availableTargets
+     */
+    private static function expandServiceLifecycleRecipe(array $recipeLines, array $availableTargets): string
+    {
+        $startTargets   = [];
+        $cleanupTargets = [];
+        $middleLines    = [];
+
+        foreach ($recipeLines as $recipeLine) {
+            if (preg_match('/^\tservice_start\(([a-z0-9-]+)\)/', $recipeLine, $matches) === 1) {
+                if (in_array($matches[1], $availableTargets, true)) {
+                    $startTargets[] = $matches[1];
+                }
+
+                continue;
+            }
+
+            if (preg_match('/^\tservice_cleanup\(([a-z0-9-]+)\)/', $recipeLine, $matches) === 1) {
+                if (in_array($matches[1], $availableTargets, true)) {
+                    $cleanupTargets[] = $matches[1];
+                }
+
+                continue;
+            }
+
+            $middleLines[] = ltrim($recipeLine, "\t");
+        }
+
+        if ($startTargets === [] && $cleanupTargets === []) {
+            return implode("\n", array_map(static fn (string $middleLine): string => "\t" . $middleLine, $middleLines));
+        }
+
+        $middleCommand = implode(' && ', array_map(trim(...), $middleLines));
+        $ciRecipe      = "\t" . $middleCommand;
+
+        $bashLines = [];
+
+        if ($startTargets !== []) {
+            $bashLines[] = "\t$(MAKE) " . implode(' ', $startTargets) . '; \\';
+        }
+
+        if ($cleanupTargets !== []) {
+            $bashLines[] = "\ttrap \"$(MAKE) " . implode(' ', $cleanupTargets) . ' || true" EXIT; \\';
+        }
+
+        $bashLines[] = "\t" . $middleCommand;
+        $localRecipe = "\t@bash -ec '" . implode("\n", $bashLines) . "'";
+
+        return implode("\n", [
+            'ifeq ("$(IN_CI)","TRUE")',
+            $ciRecipe,
+            'else',
+            $localRecipe,
+            'endif',
+        ]);
+    }
+
+    /** @return list<string> */
+    private static function extractMakefileTargets(string $makefileContents): array
+    {
+        preg_match_all('/^([a-z0-9-]+):/m', $makefileContents, $matches);
+
+        return array_values(array_unique($matches[1]));
     }
 
     /**
@@ -319,7 +478,9 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             $makefileContents = str_replace('task-list(' . $taskTarget . ')', '@echo "' . str_replace('"', '\"', $jsonTaskList) . '" ## Count: ' . count($taskList), $makefileContents);
         }
 
-        return self::injectAggregateDirectDockerFlags($makefileContents, $tasks);
+        $makefileContents = self::injectAggregateDirectDockerFlags($makefileContents, $tasks);
+
+        return self::injectExtraServicesDirectDockerFlags($makefileContents);
     }
 
     /**
@@ -352,6 +513,27 @@ final class Installer implements PluginInterface, EventSubscriberInterface
                 $matches[1][$i][0] . '=' . ($hasDirectDockerTasks ? $matches[3][$i][0] : $matches[4][$i][0]),
                 $makefileContents,
             );
+        }
+
+        return $makefileContents;
+    }
+
+    /**
+     * When a package declares extra services, aggregate targets must run on the host so
+     * service lifecycle recipes can invoke `docker compose` outside the PHP container.
+     */
+    private static function injectExtraServicesDirectDockerFlags(string $makefileContents): string
+    {
+        if (! str_contains($makefileContents, 'HAS_EXTRA_SERVICES=TRUE')) {
+            return $makefileContents;
+        }
+
+        foreach (['ALL_HAS_DIRECT_DOCKER_TASKS', 'CONTRIB_HAS_DIRECT_DOCKER_TASKS'] as $flag) {
+            $makefileContents = preg_replace(
+                '/^' . preg_quote($flag, '/') . '=FALSE$/m',
+                $flag . '=TRUE',
+                $makefileContents,
+            ) ?? $makefileContents;
         }
 
         return $makefileContents;
@@ -456,12 +638,50 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
     private static function extractTargetRecipe(string $makefileContents, string $target): string|null
     {
-        $pattern = '/^' . preg_quote($target, '/') . '(?:[^\n]*\n)((?:\t[^\n]*\n)*)/m';
-        if (preg_match($pattern, $makefileContents, $match) !== 1) {
+        if (preg_match('/^' . preg_quote($target, '/') . ':[^\n]*\n/m', $makefileContents, $match, PREG_OFFSET_CAPTURE) !== 1) {
             return null;
         }
 
-        return $match[1];
+        $offset = $match[0][1] + strlen($match[0][0]);
+        $rest   = substr($makefileContents, $offset);
+
+        if ($rest === '') {
+            return '';
+        }
+
+        $recipeLines = [];
+
+        foreach (explode("\n", $rest) as $line) {
+            if (self::isTargetRecipeLine($line)) {
+                $recipeLines[] = $line;
+
+                continue;
+            }
+
+            if ($recipeLines !== []) {
+                break;
+            }
+
+            if ($line === '' || str_starts_with($line, '#')) {
+                continue;
+            }
+
+            break;
+        }
+
+        if ($recipeLines === []) {
+            return '';
+        }
+
+        return implode("\n", $recipeLines) . "\n";
+    }
+
+    private static function isTargetRecipeLine(string $line): bool
+    {
+        return str_starts_with($line, "\t")
+            || str_starts_with($line, 'ifeq')
+            || str_starts_with($line, 'else')
+            || str_starts_with($line, 'endif');
     }
 
     /** Expands the `help(...)` placeholders with pregenerated target listings for awk formatting. */

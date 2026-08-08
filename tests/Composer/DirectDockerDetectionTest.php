@@ -54,6 +54,22 @@ final class DirectDockerDetectionTest extends TestCase
             'update-k6-repositories',
             false,
         ];
+
+        yield 'service lifecycle ifeq block recurses to docker compose' => [
+            <<<'MAKEFILE'
+before-unit-tests-service: ####
+	docker compose up -d --wait
+
+unit-testing: ## Run tests ##*AE*##
+ifeq ("$(IN_CI)","TRUE")
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit
+else
+	@bash -ec '$(MAKE) before-unit-tests-service; trap "$(MAKE) after-unit-tests-service || true" EXIT; $(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit'
+endif
+MAKEFILE,
+            'unit-testing',
+            true,
+        ];
     }
 
     private function invokeTargetCallsDockerDirectly(string $makefileContents, string $target): bool
