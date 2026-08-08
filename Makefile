@@ -10,6 +10,7 @@ SLIM_DOCKER_IMAGE="-slim"
 NTS_OR_ZTS_DOCKER_IMAGE="nts"
 OTEL_PHP_FIBERS_ENABLED=true
 NEEDS_DOCKER_SOCKET=FALSE
+HAS_EXTRA_SERVICES=FALSE
 ALL_HAS_DIRECT_DOCKER_TASKS=FALSE
 CONTRIB_HAS_DIRECT_DOCKER_TASKS=FALSE
 ON_INSTALL_OR_UPDATE_HAS_DIRECT_DOCKER_TASKS=FALSE
@@ -23,6 +24,12 @@ ifneq ("$(wildcard /.you-are-in-a-wyrihaximus.net-php-docker-image)","")
     IN_DOCKER=TRUE
 else
     IN_DOCKER=FALSE
+endif
+
+ifeq ("$(GITHUB_ACTIONS)","true")
+    IN_CI=TRUE
+else
+    IN_CI=FALSE
 endif
 
 ifeq ("$(IN_DOCKER)","TRUE")
@@ -442,17 +449,19 @@ cs: ## Check the code for code style issues ##*ELCH*##^code-style^##
 stan: ## Run static analysis (PHPStan) ##*LCH*##^static-analysis^##
 	$(DOCKER_SHELL) vendor/bin/phpstan analyse --ansi --configuration=./etc/qa/phpstan.neon
 
+PHPUNIT_COVERAGE_FLAGS=$(shell $(DOCKER_SHELL) php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
+
 unit-testing: ## Run tests ##*AE*##^unit-tests^##
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml $(shell $(DOCKER_SHELL) php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml $(PHPUNIT_COVERAGE_FLAGS)
+
+mutation-testing: ## Run mutation testing ##*LCH*##^static-analysis|unit-tests^##
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)
 
 unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
 	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml $(shell php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
 
 unit-testing-filter: ## Run tests with specified filter ####^unit-tests^##
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always --filter=$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) -c ./etc/qa/phpunit.xml $(shell $(DOCKER_SHELL) php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
-
-mutation-testing: ## Run mutation testing ##*LCH*##^static-analysis|unit-tests^##
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always --filter=$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) -c ./etc/qa/phpunit.xml $(PHPUNIT_COVERAGE_FLAGS)
 
 mutation-testing-raw: ## Run mutation testing ####^static-analysis|unit-tests^##
 	vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)

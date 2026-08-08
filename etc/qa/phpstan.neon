@@ -4,6 +4,9 @@ parameters:
 		- ../../etc
 		- ../../src
 		- ../../tests
+	excludePaths:
+		- ../../etc/base64
+		- ../../etc/qa/coverage-guard.php
 	ergebnis:
 		noExtends:
 			classesAllowedToBeExtended:
