@@ -261,7 +261,7 @@ migrations-php-set-phpstan-drop-include-async-test-utilities-rules: #### Ensure 
 	($(DOCKER_RUN) php -r '$$phpStanConfigFIle = "etc/qa/phpstan.neon"; if (!file_exists($$phpStanConfigFIle)) {exit;} $$neon = file_get_contents($$phpStanConfigFIle); if (!is_string($$neon)) {exit;} $$neon = str_replace("\nincludes:\n\t- ../../vendor/wyrihaximus/async-test-utilities/rules.neon", "", $$neon); file_put_contents($$phpStanConfigFIle, $$neon);' || true)
 
 migrations-php-set-rector-create-config-if-not-exists: #### Create Rector config file if it doesn't exists at `etc/qa/rector.php` ##*I*##
-	($(DOCKER_RUN) php -r '$$rectorConfigFile = "etc/qa/rector.php"; $$defaultRectorConfig = "<?php declare(strict_types=1); use WyriHaximus\TestUtilities\RectorConfig; return RectorConfig::configure(dirname(__DIR__, 2));"; if (file_exists($$rectorConfigFile)) {exit;} file_put_contents($$rectorConfigFile, $$defaultRectorConfig);' || true)
+	($(DOCKER_RUN) php -r '$$rectorConfigFile = "etc/qa/rector.php"; $$defaultRectorConfig = base64_decode("PD9waHAKCmRlY2xhcmUoc3RyaWN0X3R5cGVzPTEpOwoKdXNlIFd5cmlIYXhpbXVzXFRlc3RVdGlsaXRpZXNcUmVjdG9yQ29uZmlnOwoKcmV0dXJuIFJlY3RvckNvbmZpZzo6Y29uZmlndXJlKGRpcm5hbWUoX19ESVJfXywgMikpOwo="); if (file_exists($$rectorConfigFile)) {exit;} file_put_contents($$rectorConfigFile, $$defaultRectorConfig);' || true)
 
 migrations-php-composer-unused-create-config-if-not-exists: #### Create Composer Unused config file if it doesn't exists at `etc/qa/composer-unused.php` ##*I*##
 	($(DOCKER_RUN) php -r '$$composerUnusedConfigFile = "etc/qa/composer-unused.php"; $$composerUnusedConfig = "<?php declare(strict_types=1); use ComposerUnused\ComposerUnused\Configuration\Configuration; return static function (Configuration \$$config): Configuration {return \$$config;};"; if (file_exists($$composerUnusedConfigFile)) {exit;} file_put_contents($$composerUnusedConfigFile, $$composerUnusedConfig);' || true)
@@ -333,28 +333,28 @@ migrations-inline-code-phpunit-replace-expectexceptionmessage-with-expectexcepti
 	($(DOCKER_RUN) php -r '$$possibleDirectories = ["src", "tests", "etc", "examples"]; foreach ($$possibleDirectories as $$possibleDirectory) { if (!file_exists($$possibleDirectory)) {continue;} $$i = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($$possibleDirectory)); $$i->rewind(); while ($$i->valid()) { if (!is_file($$i->key()) || (is_file($$i->key()) && !str_ends_with($$i->key(), ".php"))) { $$i->next(); continue; } $$fileContents = file_get_contents($$i->key()); if (str_contains($$fileContents, "#[Test]") && str_contains($$fileContents, "use PHPUnit\Framework\Attributes\Test;")) { $$fileContents = str_replace("self::expectExceptionMessage(", "self::expectExceptionMessageIsOrContains(", $$fileContents); file_put_contents($$i->key(), $$fileContents); } $$i->next(); } }' || true)
 
 migrations-supported-features-php-ensure-we-only-cs-check-and-fix-tests-if-unit-tests-is-enabled: #### Ensure we only cs check/fix tests/ if unit-tests is enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests"])) {exit;} $$phpCSCongifFIle = "etc/qa/phpcs.xml"; $$fileContents = explode("\n", file_get_contents($$phpCSCongifFIle)); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "<file>../../tests</file>")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$phpCSCongifFIle, implode("\n", $$fileContents));' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} $$phpCSCongifFIle = "etc/qa/phpcs.xml"; $$fileContents = explode("\n", file_get_contents($$phpCSCongifFIle)); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "<file>../../tests</file>")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$phpCSCongifFIle, implode("\n", $$fileContents));' || true)
 
 migrations-supported-features-php-ensure-we-only-staticly-analyse-tests-with-phpstan-if-unit-tests-is-enabled: #### Ensure we only staticly analyse tests/ with PHPStan if unit-tests is enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests"])) {exit;} $$phpStanCongifFIle = "etc/qa/phpstan.neon"; $$fileContents = explode("\n", file_get_contents($$phpStanCongifFIle)); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "- ../../tests")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$phpStanCongifFIle, implode("\n", $$fileContents));' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} $$phpStanCongifFIle = "etc/qa/phpstan.neon"; $$fileContents = explode("\n", file_get_contents($$phpStanCongifFIle)); foreach ($$fileContents as $$lineNumber => $$lineContent) { if (str_contains($$lineContent, "- ../../tests")) { unset($$fileContents[$$lineNumber]); } } file_put_contents($$phpStanCongifFIle, implode("\n", $$fileContents));' || true)
 
 migrations-supported-features-php-ensure-no-phpunit-config-file-is-present-when-unit-tests-are-disabled: #### Ensure we remove the PHPUnit config file when unit-tests aren't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/phpunit.xml");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/phpunit.xml");' || true)
 
 migrations-supported-features-php-ensure-no-infectionphp-config-file-is-present-when-unit-tests-are-disabled: #### Ensure we remove the InfectionPHP config file when unit-tests aren't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/infection.json5");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("unit-tests", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/infection.json5");' || true)
 
 migrations-supported-features-php-ensure-no-rector-config-file-is-present-when-code-style-is-disabled: #### Ensure we remove the RectorPHP config file when code-style isn't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("code-style", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/rector.php");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("code-style", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/rector.php");' || true)
 
 migrations-supported-features-php-ensure-no-phpcs-config-file-is-present-when-code-style-is-disabled: #### Ensure we remove the PHPCSS config file when code-style isn't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("code-style", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/phpcs.xml");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("code-style", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/phpcs.xml");' || true)
 
 migrations-supported-features-php-ensure-no-composer-require-checker-config-file-is-present-when-composer-dependency-checkers-are-disabled: #### Ensure we remove the Composer Require Checker config file when composer-dependency-checkers aren't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("composer-dependency-checkers", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/composer-require-checker.json");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("composer-dependency-checkers", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/composer-require-checker.json");' || true)
 
 migrations-supported-features-php-ensure-no-composer-unused-config-file-is-present-when-composer-dependency-checkers-are-disabled: #### Ensure we remove the Composer Unused config file when composer-dependency-checkers aren't enabled ##*I*##
-	($(DOCKER_RUN) php -r 'if (in_array("composer-dependency-checkers", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests"])) {exit;} @unlink("etc/qa/composer-unused.php");' || true)
+	($(DOCKER_RUN) php -r 'if (in_array("composer-dependency-checkers", ["code-style","composer-plugin","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"])) {exit;} @unlink("etc/qa/composer-unused.php");' || true)
 
 migrations-php-make-sure-github-exists: #### Make sure `.github/` exists ##*I*##
 	($(DOCKER_RUN) mkdir .github || true)
@@ -549,7 +549,7 @@ task-list-ci-high: ## CI: Generate a JSON array of jobs to run against the highe
 	@echo "[\"syntax-php\",\"cs\",\"stan\",\"mutation-testing\"]" ## Count: 4
 
 supported-features: ## CI: List the features this package supports
-	@echo "[\"code-style\",\"composer-plugin\",\"composer-dependency-checkers\",\"linux\",\"macos\",\"static-analysis\",\"unit-tests\"]" ## Count: 7
+	@echo "[\"code-style\",\"composer-plugin\",\"composer-dependency-checkers\",\"linux\",\"macos\",\"static-analysis\",\"unit-tests\",\"windows\"]" ## Count: 8
 
 
 ## Catch-all for targets that pass through extra arguments (e.g. `make run ls`)
