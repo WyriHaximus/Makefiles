@@ -6,8 +6,7 @@ namespace WyriHaximus\Tests\Makefiles\Composer;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionMethod;
-use WyriHaximus\Makefiles\Composer\Installer;
+use WyriHaximus\Makefiles\Composer\Installer\ServiceLifecycleInjector;
 use WyriHaximus\TestUtilities\TestCase;
 
 use function str_replace;
@@ -21,7 +20,7 @@ final class ServiceLifecycleTest extends TestCase
         string $expectedNeedle,
         string $unexpectedNeedle,
     ): void {
-        $result = $this->invokeInjectServiceLifecycle($makefileContents, $this->getTmpDir());
+        $result = ServiceLifecycleInjector::inject($makefileContents);
 
         self::assertStringContainsString($expectedNeedle, $result);
         self::assertStringNotContainsString($unexpectedNeedle, $result);
@@ -95,15 +94,5 @@ MAKEFILE,
             '$(MAKE) extra-services-up;',
             'extra-services-down',
         ];
-    }
-
-    private function invokeInjectServiceLifecycle(string $makefileContents, string $rootPackagePath): string
-    {
-        $method = new ReflectionMethod(Installer::class, 'injectServiceLifecycle');
-
-        /** @var string $result */
-        $result = $method->invoke(null, $makefileContents, $rootPackagePath);
-
-        return $result;
     }
 }
