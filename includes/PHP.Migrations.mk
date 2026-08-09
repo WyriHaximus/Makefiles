@@ -118,6 +118,9 @@ migrations-php-set-phpstan-drop-include-async-test-utilities-rules: #### Ensure 
 migrations-php-set-rector-create-config-if-not-exists: #### Create Rector config file if it doesn't exists at `etc/qa/rector.php` ##*I*##
 	($(DOCKER_RUN) php -r '$$rectorConfigFile = "etc/qa/rector.php"; $$defaultRectorConfig = base64_decode("base64(rector.php)"); if (file_exists($$rectorConfigFile)) {exit;} file_put_contents($$rectorConfigFile, $$defaultRectorConfig);' || true)
 
+migrations-php-update-rector-from-testutilities-to-rectorphp-namespace-for-rector-config: #### Update RectorPHP config file `etc/qa/rector.php` from `TestUtilities` to `RectorPHP` namespace ##*I*##
+	($(DOCKER_RUN) php -r '$$rectorConfigFile = "etc/qa/rector.php"; if (!file_exists($$rectorConfigFile)) {exit;} file_put_contents($$rectorConfigFile, str_replace("use WyriHaximus\\TestUtilities\\RectorConfig;", "use WyriHaximus\\RectorPHP\\RectorConfig;", file_get_contents($$rectorConfigFile)));' || true)
+
 migrations-php-composer-unused-create-config-if-not-exists: #### Create Composer Unused config file if it doesn't exists at `etc/qa/composer-unused.php` ##*I*##
 	($(DOCKER_RUN) php -r '$$composerUnusedConfigFile = "etc/qa/composer-unused.php"; $$composerUnusedConfig = "<?php declare(strict_types=1); use ComposerUnused\ComposerUnused\Configuration\Configuration; return static function (Configuration \$$config): Configuration {return \$$config;};"; if (file_exists($$composerUnusedConfigFile)) {exit;} file_put_contents($$composerUnusedConfigFile, $$composerUnusedConfig);' || true)
 
