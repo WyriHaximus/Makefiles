@@ -3,6 +3,11 @@ SHELL=bash
 
 .PHONY: *
 
+ifneq (,$(findstring icrosoft,$(shell cat /proc/version)))
+    THREADS?=1
+else
+    THREADS?=$(shell nproc)
+endif
 DOCKER_AVAILABLE=$(shell ((command -v docker >/dev/null 2>&1) && echo 0 || echo 1))
 TTY_AVAILABLE=$(shell (test -t 1 && echo 0) || echo 1)
 CONTAINER_REGISTRY_REPO="ghcr.io/wyrihaximusnet/php"
@@ -41,7 +46,7 @@ ifeq ("$(IN_DOCKER)","TRUE")
 else
     ifeq ($(DOCKER_AVAILABLE),0)
         DOCKER_DEFAULT_SECURITY_OPS=--cap-drop=ALL --security-opt="no-new-privileges=true" --user="`id -u`:`id -g`"
-        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "`pwd`/.git:`pwd`/.git:ro" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" --ulimit nofile=1000000
+        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "`pwd`/.git:`pwd`/.git:ro" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" --ulimit nofile=1000000 -e THREADS="${THREADS}"
         DOCKER_COMMON_NON_INTERACTIVE_OPS:=-e OTEL_PHP_FIBERS_ENABLED="${OTEL_PHP_FIBERS_ENABLED}"
         DOCKER_COMMON_INTERACTIVE_OPS:=-e OTEL_PHP_FIBERS_ENABLED="false"
         ifeq ("$(NEEDS_DOCKER_SOCKET)","TRUE")
@@ -76,12 +81,6 @@ else
         DOCKER_SHELL:=
 		DOCKER_INTERACTIVE_SHELL:=
     endif
-endif
-
-ifneq (,$(findstring icrosoft,$(shell cat /proc/version)))
-    THREADS=1
-else
-    THREADS=$(shell nproc)
 endif
 
 ## Run everything extra points
