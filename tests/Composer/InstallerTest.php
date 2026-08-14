@@ -18,7 +18,7 @@ use PHPUnit\Framework\Attributes\Test;
 use WyriHaximus\Makefiles\Composer\Installer;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ComposerFixture;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function chmod;
 use function dirname;
@@ -66,6 +66,7 @@ final class InstallerTest extends TestCase
         yield 'invalid composer json' => ['invalid-json', true, 'not-json', false];
         yield 'without makefiles dependency' => ['no-makefiles', true, '{"name":"example/no-makefiles","require-dev":{"php":"^8.4"}}', false];
         yield 'unreadable composer json' => ['unreadable-json', true, '{}', true];
+        yield 'composer json is a directory' => ['composer-dir', true, '', false];
     }
 
     #[Test]
@@ -162,9 +163,13 @@ final class InstallerTest extends TestCase
         mkdir($vendorDir, 0755, true);
 
         if ($writeComposerJson) {
-            file_put_contents($root . 'composer.json', $composerJson);
-            if ($composerJson === '{}') {
-                chmod($root . 'composer.json', 0000);
+            if ($suffix === 'composer-dir') {
+                mkdir($root . 'composer.json', 0755, true);
+            } else {
+                file_put_contents($root . 'composer.json', $composerJson);
+                if ($composerJson === '{}') {
+                    chmod($root . 'composer.json', 0000);
+                }
             }
         }
 

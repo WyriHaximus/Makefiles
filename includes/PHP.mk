@@ -23,24 +23,30 @@ cs: ## Check the code for code style issues ##*ELCH*##^code-style^##
 stan: ## Run static analysis (PHPStan) ##*LCH*##^static-analysis^##
 	$(DOCKER_SHELL) vendor/bin/phpstan analyse --ansi --configuration=./etc/qa/phpstan.neon
 
-PHPUNIT_COVERAGE_FLAGS=$(shell $(DOCKER_SHELL) php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
-
 unit-testing: ## Run tests ##*AE*##^unit-tests^##
 	service_start(before-unit-tests-service)
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml $(PHPUNIT_COVERAGE_FLAGS)
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+	$(MAKE) coverage-guard
 	service_cleanup(after-unit-tests-service)
+
+unit-testing-filter: ## Run tests with specified filter ####^unit-tests^##
+	service_start(before-unit-tests-service)
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always --filter=$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+	service_cleanup(after-unit-tests-service)
+
+unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
+	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+	$(MAKE) coverage-guard-raw
+
+coverage-guard: ## Enforce code coverage rules ####
+	$(DOCKER_RUN) vendor/bin/coverage-guard check ./var/phpunit/coverage/clover.xml --config=./etc/qa/coverage-guard.php
+
+coverage-guard-raw: ## Enforce code coverage rules ####
+	php vendor/bin/coverage-guard check ./var/phpunit/coverage/clover.xml --config=./etc/qa/coverage-guard.php
 
 mutation-testing: ## Run mutation testing ##*LCH*##^static-analysis|unit-tests^##
 	service_start(before-unit-tests-service)
 	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)
-	service_cleanup(after-unit-tests-service)
-
-unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
-	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml $(shell php -r 'if (function_exists("xdebug_get_code_coverage")) { echo " --coverage-text --coverage-html ./var/tests-unit-coverage-html --coverage-clover ./var/tests-unit-clover-coverage.xml"; }')
-
-unit-testing-filter: ## Run tests with specified filter ####^unit-tests^##
-	service_start(before-unit-tests-service)
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always --filter=$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) -c ./etc/qa/phpunit.xml $(PHPUNIT_COVERAGE_FLAGS)
 	service_cleanup(after-unit-tests-service)
 
 mutation-testing-raw: ## Run mutation testing ####^static-analysis|unit-tests^##

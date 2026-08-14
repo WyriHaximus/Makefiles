@@ -14,20 +14,32 @@ use function closedir;
 use function copy;
 use function dirname;
 use function file_exists;
+use function file_put_contents;
 use function function_exists;
 use function is_dir;
 use function is_file;
+use function is_link;
 use function mkdir;
 use function opendir;
 use function posix_geteuid;
 use function readdir;
 use function rtrim;
+use function strtoupper;
+use function substr;
+use function symlink;
+use function sys_get_temp_dir;
+use function uniqid;
+use function unlink;
 
 use const DIRECTORY_SEPARATOR;
+use const PHP_OS;
+use const PHP_OS_FAMILY;
 
 final class ProjectSandbox
 {
     private const array PACKAGE_DIRECTORIES = ['src', 'templates', 'includes', 'etc'];
+
+    private static bool|null $canCreateSymlinks = null;
 
     private function __construct()
     {
@@ -131,7 +143,36 @@ final class ProjectSandbox
 
     public static function canSimulateUnreadableFiles(): bool
     {
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            return false;
+        }
+
         return ! function_exists('posix_geteuid') || posix_geteuid() !== 0;
+    }
+
+    public static function canCreateSymlinks(): bool
+    {
+        if (self::$canCreateSymlinks !== null) {
+            return self::$canCreateSymlinks;
+        }
+
+        if (PHP_OS_FAMILY !== 'Windows') {
+            return self::$canCreateSymlinks = true;
+        }
+
+        $target = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('wh-st-', true);
+        $link   = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('wh-sl-', true);
+        file_put_contents($target, '');
+
+        self::$canCreateSymlinks = symlink($target, $link) && is_link($link);
+
+        if (is_link($link)) {
+            unlink($link);
+        }
+
+        unlink($target);
+
+        return self::$canCreateSymlinks;
     }
 
     public static function packageSourceRoot(): string

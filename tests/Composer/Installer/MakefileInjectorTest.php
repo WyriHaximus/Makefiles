@@ -15,7 +15,7 @@ use WyriHaximus\Makefiles\Composer\Installer\SupportedFeaturesInjector;
 use WyriHaximus\Makefiles\Composer\Installer\SupportedFeaturesResolver;
 use WyriHaximus\Makefiles\Composer\SupportedFeatures;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
-use WyriHaximus\TestUtilities\TestCase;
+use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function array_merge;
 use function base64_encode;
@@ -24,6 +24,7 @@ use function dirname;
 use function file_get_contents;
 use function file_put_contents;
 use function mkdir;
+use function rmdir;
 use function unlink;
 
 final class MakefileInjectorTest extends TestCase
@@ -230,10 +231,25 @@ MAKEFILE,
     }
 
     #[Test]
+    public function base64InjectSkipsNonFileEntries(): void
+    {
+        $base64Dir = dirname(__DIR__, 3) . '/etc/base64/';
+        $entryPath = $base64Dir . 'coverage-directory-entry';
+        mkdir($entryPath);
+
+        try {
+            $input = 'before base64(coverage-directory-entry) after';
+            self::assertSame($input, Base64FileInjector::inject($input));
+        } finally {
+            rmdir($entryPath);
+        }
+    }
+
+    #[Test]
     public function base64InjectSkipsUnreadableEntries(): void
     {
         if (! ProjectSandbox::canSimulateUnreadableFiles()) {
-            self::markTestSkipped('File permission tests cannot run as root.');
+            self::markTestSkipped('File permission tests cannot run on Windows or as root.');
         }
 
         $base64Dir = dirname(__DIR__, 3) . '/etc/base64/';

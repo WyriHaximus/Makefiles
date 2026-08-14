@@ -128,11 +128,7 @@ final class DirectDockerDetector
             return true;
         }
 
-        if (preg_match_all('/\$\(MAKE\)\s+([a-zA-Z0-9_-]+)/', $recipe, $subTargets) === false) {
-            return false;
-        }
-
-        if ($subTargets[1] === []) {
+        if (preg_match_all('/\$\(MAKE\)\s+([a-zA-Z0-9_-]+)/', $recipe, $subTargets) === 0) {
             return false;
         }
 
