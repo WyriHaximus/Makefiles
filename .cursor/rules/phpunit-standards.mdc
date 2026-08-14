@@ -1,0 +1,19 @@
+---
+description: PHPUnit, Infection, and PHPStan test requirements
+globs: "tests/**,**/*Test.php"
+alwaysApply: false
+---
+
+# Unit tests
+
+- Test the happy flows (PHPUnit)
+- Test the unhappy flows (PHPUnit)
+- Test the edge cases (PHPUnit)
+- Test the fuzzy cases (PHPUnit)
+- 100% coverage is required (PHPUnit)
+- 100% MSI is required (mutation testing (InfectionPHP))
+- 100% type coverage is required (PHPStan)
+- Use dataproviders wherever possible (PHPUnit)
+- Prefer creating subs and spies over mocks
+- Look at [`wyrihaximus/test-utilities`](https://github.com/WyriHaximus/php-test-utilities) and [`wyrihaximus/async-test-utilities`](https://github.com/WyriHaximus/php-async-test-utilities) for some useful helpers
+- When tests are known to take longer than 10 seconds, when possible use `make unit-testing-filter TESTCLASSNAME_OR_TESTMETHODNAME` to run them in parallel across subagents

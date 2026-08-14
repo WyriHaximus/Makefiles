@@ -1,0 +1,10 @@
+---
+description: Markdown link requirements
+globs: "**/*.md"
+alwaysApply: false
+---
+
+# Markdown
+
+- Always link every reference that has a URL (`[label](url)`); never bare backticks or plain text alone
+- Composer packages → GitHub repo (resolve via Packagist); docs and specs → canonical URL

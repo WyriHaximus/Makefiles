@@ -1,0 +1,23 @@
+---
+description: Make-based dev workflow (install, run, QA)
+alwaysApply: true
+---
+
+# Make workflow
+
+## Dependencies
+- Install: `make install`
+- Require a new package: `make composer-require "PACKAGENAME"` or `make composer-require "PACKAGENAME --dev"`
+
+## Executing commands
+- Do not use `cd` for everything, you're already in the root!
+- Check `make help` for all available commands
+- Check `make help-contrib` for all available contrib commands
+- Need something custom that is not in the list? Use `make run "YOUR COMMAND HERE"` to run a command in the container and run whatever you require there
+
+## Flow
+- After each logical block of changes made ensure `make contrib` passes
+- Before you return to the user run `make` to ensure all QA checks pass (also enforced by the stop hook)
+- Use `make unit-testing-filter TESTCLASSNAME_OR_TESTMETHODNAME` to run a specific test
+- Always add unit tests for new code
+- If `composer.lock` is out of sync with `composer.json`, run `make update`

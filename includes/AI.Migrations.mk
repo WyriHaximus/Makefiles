@@ -1,2 +1,5 @@
+migrations-git-enforce-agent-config: #### Enforce agent config tree ##*I*##
+	($(DOCKER_RUN) php -r 'file_put_contents("AGENTS.md", base64_decode("base64(AGENTS-md)"));$$candidates=["etc/agent","vendor/wyrihaximus/makefiles/etc/agent"];$$source=null;foreach($$candidates as $$candidate){if(is_dir($$candidate)){$$source=$$candidate;break;}}if($$source===null){exit(0);}$$copyDir=function(string $$src,string $$dest)use(&$$copyDir):void{if(!is_dir($$dest)){mkdir($$dest,0755,true);}foreach(scandir($$src)?:[] as $$entry){if($$entry==="."||$$entry===".."){continue;}$$from=$$src."/".$$entry;$$to=$$dest."/".$$entry;if(is_dir($$from)){$$copyDir($$from,$$to);continue;}copy($$from,$$to);if(str_ends_with($$entry,".sh")){chmod($$to,0755);}}};if(is_dir($$source."/cursor")){$$copyDir($$source."/cursor",".cursor");}if(is_file($$source."/claude/settings.json")){if(!is_dir(".claude")){mkdir(".claude",0755,true);}copy($$source."/claude/settings.json",".claude/settings.json");}' || true)
+
 migrations-git-enforce-agents-md-contents: #### Enforce `AGENTS.md` contents ##*I*##
-	($(DOCKER_RUN) php -r 'file_put_contents("AGENTS.md", base64_decode("base64(AGENTS-md)"));' || true)
+	$(MAKE) migrations-git-enforce-agent-config

@@ -1,0 +1,22 @@
+---
+description: PHP coding standards and forbidden actions
+globs: "**/*.php"
+alwaysApply: false
+---
+
+# Writing code
+
+- Keep things simple, once done implementing a feature, iterate on improving it. Less code is more.
+- Make sure the code is readable and easy to understand.
+- Prefer a logical block of code to be within one screen size over splitting it up in multiple smaller functions.
+- Make a class static if it doesn't hold state.
+- Put classes in logical folders.
+- Once done writing code iterate of it to make sure it's easy to understand and maintain, that it's easy to test, and that it doesn't duplicate code.
+- Search existing code for examples of how to do things.
+- Search existing code for classes/methods you can use instead of writing your own.
+
+# Forbidden actions
+
+- Create dead/unused methods/classes/functions/code
+- Using the `assert` function
+- Assigning a property to a variable without assigning a new value to it

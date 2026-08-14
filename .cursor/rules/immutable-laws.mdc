@@ -1,0 +1,15 @@
+---
+description: Cross-cutting project laws
+alwaysApply: true
+---
+
+# Immutable laws
+
+- Consistency is the key.
+- Always add regressions to the test suite when fixing bugs or when the user tells you whatever you wrote is still broken.
+- If several parts of the code rely on the same behavior (and data), centralize it in a single place.
+- Always apply the boyscout rule: Leave the code better than you found it. But do not touch anything else than what you're touching.
+- Always show the plan. / When calling `CreatePlan` always show the plan.
+- When ever you're done, before returning to the user always done 1 to 3 passes of reducing the amount of code you wrote while keeping it readable and maintainable.
+- When you get `Error: RetriableError: [canceled] http/2 stream closed with error code CANCEL (0x8)` retry the request
+- Never, ever, ever use ` — ` in documentation!!!!!
