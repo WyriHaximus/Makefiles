@@ -43,6 +43,9 @@ migrations-php-ensure-etc-ci-markdown-link-checker-json-exists: #### Make sure w
 migrations-php-ensure-etc-qa-coverage-guard-php-exists: #### Make sure we have `etc/qa/coverage-guard.php` ##*I*##
 	($(DOCKER_RUN) php -r '$$coverageGuardFile = "etc/qa/coverage-guard.php"; $$coverageGuardConfig = base64_decode("base64(coverage-guard.php)"); if (file_exists($$coverageGuardFile)) {exit;} file_put_contents($$coverageGuardFile, $$coverageGuardConfig);' || true)
 
+migrations-php-ensure-etc-qa-zzz-disable-otel-attr-hooks-ini-exists: #### Make sure we have `etc/qa/zzz_disable_otel_attr_hooks.ini` ##*I*##
+	($(DOCKER_RUN) php -r '$$otelAttrHooksIniFile = "etc/qa/zzz_disable_otel_attr_hooks.ini"; $$otelAttrHooksIniContents = base64_decode("base64(zzz_disable_otel_attr_hooks.ini)"); if (file_exists($$otelAttrHooksIniFile)) {exit;} file_put_contents($$otelAttrHooksIniFile, $$otelAttrHooksIniContents);' || true)
+
 migrations-php-move-infection-config-to-etc: #### Move `infection.json.dist` to `etc/qa/infection.json5` ##*I*##
 	($(DOCKER_RUN) mv infection.json.dist etc/qa/infection.json5 || true)
 
