@@ -37,6 +37,12 @@ else
     IN_CI=FALSE
 endif
 
+ifeq ("$(IN_CI)","TRUE")
+    MUTATION_THREADS?=1
+else
+    MUTATION_THREADS?=$(THREADS)
+endif
+
 ifeq ("$(IN_DOCKER)","TRUE")
 	DOCKER_RUN:=
 	DOCKER_RUN_WITHOUT_NETWORK_FOR_COMPOSER:=
@@ -46,7 +52,7 @@ ifeq ("$(IN_DOCKER)","TRUE")
 else
     ifeq ($(DOCKER_AVAILABLE),0)
         DOCKER_DEFAULT_SECURITY_OPS=--cap-drop=ALL --security-opt="no-new-privileges=true" --user="`id -u`:`id -g`"
-        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "`pwd`/.git:`pwd`/.git:ro" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" --ulimit nofile=1000000 -e THREADS="${THREADS}" -e OTEL_PHP_DISABLED_INSTRUMENTATIONS="all"
+        DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "`pwd`/.git:`pwd`/.git:ro" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" --ulimit nofile=1000000 -e THREADS="${THREADS}" -e MUTATION_THREADS="${MUTATION_THREADS}" -e OTEL_PHP_DISABLED_INSTRUMENTATIONS="all"
         ifneq ("$(wildcard etc/qa/zzz_disable_otel_attr_hooks.ini)","")
             DOCKER_COMMON_OPS:=${DOCKER_COMMON_OPS} -v "`pwd`/etc/qa/zzz_disable_otel_attr_hooks.ini:/usr/local/etc/php/conf.d/zzz_disable_otel_attr_hooks.ini:ro"
         endif
@@ -480,10 +486,10 @@ coverage-guard-raw: ## Enforce code coverage rules ####
 	php vendor/bin/coverage-guard check ./var/phpunit/coverage/clover.xml --config=./etc/qa/coverage-guard.php
 
 mutation-testing: ## Run mutation testing ##*LCH*##^static-analysis|unit-tests^##
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(MUTATION_THREADS)
 
 mutation-testing-raw: ## Run mutation testing ####^static-analysis|unit-tests^##
-	vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(THREADS)
+	vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(MUTATION_THREADS)
 
 composer-require-checker: ## Ensure we require every package used in this package directly ##*EC*##^composer-dependency-checkers^##
 	$(DOCKER_SHELL) vendor/bin/composer-require-checker --ignore-parse-errors --ansi -vvv --config-file=./etc/qa/composer-require-checker.json
