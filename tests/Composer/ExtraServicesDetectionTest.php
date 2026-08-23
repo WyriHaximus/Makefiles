@@ -81,9 +81,24 @@ final class ExtraServicesDetectionTest extends TestCase
         self::assertIsString($template);
         self::assertStringContainsString('ifeq ("$(GITHUB_ACTIONS)","true")', $template);
         self::assertStringContainsString('IN_CI=FALSE', $template);
+        self::assertStringContainsString('MUTATION_THREADS?=$(THREADS)', $template);
+        self::assertStringContainsString('ifeq ("$(IN_CI)","TRUE")', $template);
+        self::assertStringContainsString('MUTATION_THREADS?=1', $template);
+        self::assertStringContainsString('-e MUTATION_THREADS="${MUTATION_THREADS}"', $template);
         self::assertStringNotContainsString('include includes/Services.mk', $template);
         self::assertStringNotContainsString('RUN_WITH_EXTRA_SERVICES', $template);
         self::assertStringNotContainsString('EXTRA_SERVICES_DOCKER_NETWORK', $template);
+    }
+
+    #[Test]
+    public function phpMkUsesMutationThreadsForInfection(): void
+    {
+        $phpMkPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'PHP.mk';
+        $phpMk     = file_get_contents($phpMkPath);
+
+        self::assertIsString($phpMk);
+        self::assertStringContainsString('--threads=$(MUTATION_THREADS)', $phpMk);
+        self::assertStringNotContainsString('--threads=$(THREADS)', $phpMk);
     }
 
     #[Test]
