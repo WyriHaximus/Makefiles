@@ -79,6 +79,7 @@ Before adding an instruction ANYWHERE — AGENTS.mds, rules, agents, skills, hoo
 - Create dead/unused methods/classes/functions/code
 - Using the `assert` function
 - Assigning a property to a variable without assigning a new value to it
+- Never update `Makefile` or `AGENTS.md` outside [`wyrihaximus/makefiles`](https://github.com/WyriHaximus/Makefiles); suggest changes to that repository instead
 
 ## Recovery
 - When you get `Error: RetriableError: [canceled] http/2 stream closed with error code CANCEL (0x8)` retry the request
