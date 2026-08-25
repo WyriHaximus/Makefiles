@@ -46,6 +46,12 @@ final class MakefileInjectorTest extends TestCase
             'NEEDS_DOCKER_SOCKET=FALSE',
         ];
 
+        yield 'conditional assignment operator' => [
+            'OTEL_PHP_FIBERS_ENABLED?=when_in_requirements(["ext-parallel"], FALSE, TRUE)',
+            ['php'],
+            'OTEL_PHP_FIBERS_ENABLED?=TRUE',
+        ];
+
         yield 'invalid json list' => [
             'NEEDS_DOCKER_SOCKET=when_in_requirements([broken], TRUE, FALSE)',
             ['php'],
