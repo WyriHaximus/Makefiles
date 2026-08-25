@@ -85,6 +85,7 @@ final class ExtraServicesDetectionTest extends TestCase
         self::assertStringContainsString('ifeq ("$(IN_CI)","TRUE")', $template);
         self::assertStringContainsString('MUTATION_THREADS?=1', $template);
         self::assertStringContainsString('-e MUTATION_THREADS="${MUTATION_THREADS}"', $template);
+        self::assertStringContainsString('OTEL_PHP_FIBERS_ENABLED?=when_in_requirements', $template);
         self::assertStringNotContainsString('include includes/Services.mk', $template);
         self::assertStringNotContainsString('RUN_WITH_EXTRA_SERVICES', $template);
         self::assertStringNotContainsString('EXTRA_SERVICES_DOCKER_NETWORK', $template);
