@@ -47,9 +47,9 @@ final class MakefileInjectorTest extends TestCase
         ];
 
         yield 'conditional assignment operator' => [
-            'OTEL_PHP_FIBERS_ENABLED?=when_in_requirements(["ext-parallel"], FALSE, TRUE)',
+            'OTEL_PHP_FIBERS_ENABLED?=when_in_requirements(["ext-parallel"], false, true)',
             ['php'],
-            'OTEL_PHP_FIBERS_ENABLED?=TRUE',
+            'OTEL_PHP_FIBERS_ENABLED?=true',
         ];
 
         yield 'invalid json list' => [
