@@ -1,6 +1,9 @@
 migrations-git-enforce-gitattributes-contents: #### Enforce `.gitattributes` contents ##*I*##
 	($(DOCKER_RUN) php -r 'file_put_contents(".gitattributes", base64_decode("base64(DOTgitattributes)"));' || true)
 
+migrations-git-enforce-editorconfig-contents: #### Enforce `.editorconfig` contents ##*I*##
+	($(DOCKER_RUN) php -r 'file_put_contents(".editorconfig", base64_decode("base64(DOTeditorconfig)"));' || true)
+
 migrations-git-make-sure-gitignore-exists: #### Make sure `.gitignore` exists ##*I*##
 	($(DOCKER_RUN) touch .gitignore || true)
 
