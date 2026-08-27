@@ -30,3 +30,6 @@ migrations-github-actions-fix-management-in-release-management-referenced-workfl
 
 migrations-github-actions-create-release-management-if-not-exists: #### Create Release Management Workflow if it doesn't exists at `.github/workflows/release-management.yaml` ##*I*##
 	($(DOCKER_RUN) php -r '$$releaseManagementWorkflowFile = ".github/workflows/release-management.yaml"; $$releaseManagementWorkflowContents = base64_decode("base64(release-management.yaml)"); if (file_exists($$releaseManagementWorkflowFile)) {exit;} file_put_contents($$releaseManagementWorkflowFile, $$releaseManagementWorkflowContents);' || true)
+
+migrations-github-actions-ensure-runs-on-is-the-only-runs-on-variant-in-utils-yaml: #### Ensure `runsOn` is the only `runsOn` variant in `.github/workflows/utils.yaml` ##*I*##
+	($(DOCKER_RUN) php -r '$$utilsWorkflowFile = ".github/workflows/utils.yaml"; if (!file_exists($$utilsWorkflowFile)) {exit;} $$yaml = file_get_contents($$utilsWorkflowFile); if (!is_string($$yaml)) {exit;} $$yaml = preg_replace("#(\s+)runsOn[A-Za-z0-9_]+:#", "$$1runsOn:", $$yaml); file_put_contents($$utilsWorkflowFile, $$yaml);' || true)
