@@ -33,3 +33,6 @@ migrations-github-actions-create-release-management-if-not-exists: #### Create R
 
 migrations-github-actions-ensure-runs-on-is-the-only-runs-on-variant-in-utils-yaml: #### Ensure `runsOn` is the only `runsOn` variant in `.github/workflows/utils.yaml` ##*I*##
 	($(DOCKER_RUN) php -r '$$utilsWorkflowFile = ".github/workflows/utils.yaml"; if (!file_exists($$utilsWorkflowFile)) {exit;} $$yaml = file_get_contents($$utilsWorkflowFile); if (!is_string($$yaml)) {exit;} $$yaml = preg_replace("#(\s+)runsOn[A-Za-z0-9_]+:#", "$$1runsOn:", $$yaml); file_put_contents($$utilsWorkflowFile, $$yaml);' || true)
+
+migrations-github-actions-pin-package-workflow-reference-at-v1-0-0: #### Pin WyriHaximus/github-workflows reusable workflow references from `@main` to `@v1.0.0` in `.github/workflows` ##*I*##
+	($(DOCKER_RUN) php -r '$$workflowsDir = ".github/workflows"; if (!is_dir($$workflowsDir)) {exit;} foreach (scandir($$workflowsDir) as $$file) { if (!str_ends_with($$file, ".yaml")) {continue;} $$workflowFile = $$workflowsDir . "/" . $$file; $$yaml = file_get_contents($$workflowFile); if (!is_string($$yaml)) {continue;} $$newYaml = preg_replace("#(uses: WyriHaximus/github-workflows/.github/workflows/[a-z0-9-]+)\\.yaml@main#", "$$1@v1.0.0", $$yaml); if ($$newYaml === $$yaml) {continue;} file_put_contents($$workflowFile, $$newYaml); }' || true)
