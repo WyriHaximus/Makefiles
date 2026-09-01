@@ -82,14 +82,22 @@ migrations-docs-fix: ## Migration task ####
 beta: ## Beta contrib ##*E*##
 hidden: ## Hidden ##U##
 MAKEFILE,
-            ["'alpha: ## Alpha task", 'migrations-docs-fix: ## Migration task', 'beta: ## Beta contrib'],
-            ["'hidden: ## Hidden", 'help(main)'],
+            [
+                '@printf "\033[33mUsage:\033[0m\n"',
+                '@printf "  make [target]\n"',
+                '@printf "\n"',
+                '@printf "\033[33mTargets:\033[0m\n"',
+                '@printf "  \033[32m%-32s\033[0m %s\n" \'alpha\' \'Alpha task\'',
+                '@printf "  \033[32m%-32s\033[0m %s\n" \'beta\' \'Beta contrib\'',
+                '@printf "  \033[32m%-32s\033[0m %s\n" \'migrations-docs-fix\' \'Migration task\'',
+            ],
+            ["'hidden: ## Hidden", 'help(main)', '| awk', '@printf "\033[33mUsage:\033[0m\n  make [target]'],
         ];
 
         yield 'skips malformed help lines' => [
             "broken-line-without-proper-format\nvalid: ## Valid ####\nhelp(main)\n",
-            ["'valid: ## Valid'"],
-            ["'broken-line", 'help(main)'],
+            ['@printf "  \033[32m%-32s\033[0m %s\n" \'valid\' \'Valid\'', '@printf "\033[33mUsage:\033[0m\n"'],
+            ["'broken-line", 'help(main)', '| awk', "valid: ## Valid\\n"],
         ];
     }
 
