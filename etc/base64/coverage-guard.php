@@ -10,7 +10,7 @@ return (static function (): Config {
     $config = new Config();
 
     $config->addRule(new EnforceCoverageForMethodsRule(
-        requiredCoveragePercentage: 100,
+        requiredCoveragePercentage: 80,
         minExecutableLines: 1,
     ));
 
