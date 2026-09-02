@@ -240,14 +240,18 @@ MAKEFILE,
     public function base64InjectSkipsNonFileEntries(): void
     {
         $base64Dir = dirname(__DIR__, 3) . '/etc/base64/';
-        $entryPath = $base64Dir . 'coverage-directory-entry';
+        $entryPath = $base64Dir . '0-coverage-directory-entry';
+        $filePath  = $base64Dir . 'z-coverage-encode-entry';
         mkdir($entryPath);
+        file_put_contents($filePath, 'temporary');
 
         try {
-            $input = 'before base64(coverage-directory-entry) after';
-            self::assertSame($input, Base64FileInjector::inject($input));
+            $input    = 'before base64(0-coverage-directory-entry) middle base64(z-coverage-encode-entry) after';
+            $expected = 'before base64(0-coverage-directory-entry) middle ' . base64_encode('temporary') . ' after';
+            self::assertSame($expected, Base64FileInjector::inject($input));
         } finally {
             rmdir($entryPath);
+            unlink($filePath);
         }
     }
 
@@ -264,8 +268,11 @@ MAKEFILE,
         chmod($entryPath, 0000);
 
         try {
-            $input = 'before base64(coverage-unreadable-entry) after';
-            self::assertSame($input, Base64FileInjector::inject($input));
+            $license = file_get_contents($base64Dir . 'LICENSE');
+            self::assertIsString($license);
+            $input    = 'before base64(coverage-unreadable-entry) middle base64(LICENSE) after';
+            $expected = 'before base64(coverage-unreadable-entry) middle ' . base64_encode($license) . ' after';
+            self::assertSame($expected, Base64FileInjector::inject($input));
         } finally {
             chmod($entryPath, 0644);
             unlink($entryPath);

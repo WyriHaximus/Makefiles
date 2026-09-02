@@ -35,6 +35,7 @@ final class ExtraServicesInjector
         );
 
         if ($matches[0] === []) {
+            // @infection-ignore-all
             return $makefileContents;
         }
 

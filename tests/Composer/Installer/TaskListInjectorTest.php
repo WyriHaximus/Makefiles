@@ -48,6 +48,20 @@ MAKEFILE,
             ['$(MAKE)  ## Count: 0'],
             ['$(MAKE) gated'],
         ];
+
+        yield 'skips piped feature gated targets when any feature disabled' => [
+            "make-list(all)\nALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)\npiped: ## cs ##*AI*##^code-style|unit-tests^##\nenabled: ## ok ##*A*##\n",
+            $features,
+            ['$(MAKE) enabled ## Count: 1'],
+            ['$(MAKE) piped'],
+        ];
+
+        yield 'feature gate on first target does not skip second target' => [
+            "make-list(all)\nmake-list(contrib)\nALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)\ngated: ## cs ##*A*##^code-style^##\nenabled: ## ok ##*A*##\ncontrib-task: ## contrib ##*E*##\n",
+            $features,
+            ['$(MAKE) enabled ## Count: 1', '$(MAKE) contrib-task ## Count: 1'],
+            ['$(MAKE) gated'],
+        ];
     }
 
     /**

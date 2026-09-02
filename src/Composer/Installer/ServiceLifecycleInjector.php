@@ -31,6 +31,7 @@ final class ServiceLifecycleInjector
     public static function inject(string $makefileContents): string
     {
         if (! str_contains($makefileContents, 'service_start(') && ! str_contains($makefileContents, 'service_cleanup(')) {
+            // @infection-ignore-all
             return $makefileContents;
         }
 

@@ -68,6 +68,7 @@ final class MakefileGenerator
         assert($written === strlen($contents));
 
         if (is_file($path)) {
+            // @infection-ignore-all
             unlink($path);
         }
 

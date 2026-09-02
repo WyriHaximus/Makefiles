@@ -136,9 +136,13 @@ MAKEFILE);
         );
 
         MakefileGenerator::generate($context);
+        self::assertSame("alpha: ## Alpha ####\n", file_get_contents($root . 'Makefile'));
+
+        file_put_contents($reference . 'templates/Makefile.PHP', "beta: ## Beta ####\n");
         MakefileGenerator::generate($context);
 
         self::assertFileExists($root . 'Makefile');
+        self::assertSame("beta: ## Beta ####\n", file_get_contents($root . 'Makefile'));
     }
 
     #[Test]
@@ -199,6 +203,7 @@ MAKEFILE);
     public static function provideIsAbsolutePathCases(): iterable
     {
         yield 'empty path' => ['', false];
+        yield 'drive letter colon only' => ['D:', true];
     }
 
     #[Test]

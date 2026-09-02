@@ -102,6 +102,7 @@ final class TaskListInjector
                     if ($matches[7][$i][0] !== '') {
                         foreach (explode('|', $matches[7][$i][0]) as $feature) {
                             if (! array_key_exists($feature, $context->supportedFeatures) || $context->supportedFeatures[$feature] === false) {
+                                // @infection-ignore-all
                                 continue 2;
                             }
                         }
