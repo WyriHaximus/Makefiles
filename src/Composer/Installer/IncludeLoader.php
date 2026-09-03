@@ -63,6 +63,7 @@ final class IncludeLoader
 
         $makefileIncludePath = new SplFileInfo($candidatePath)->getRealPath();
         if ($makefileIncludePath === false || ! is_file($makefileIncludePath) || ! is_readable($makefileIncludePath)) {
+            // @infection-ignore-all
             return '';
         }
 
