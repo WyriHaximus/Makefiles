@@ -14,6 +14,17 @@ use function str_replace;
 final class ServiceLifecycleTest extends TestCase
 {
     #[Test]
+    public function injectLeavesMakefileUntouchedWithoutServicePlaceholders(): void
+    {
+        $input = <<<'MAKEFILE'
+unit-testing: ## Run tests ##*AE*##^unit-tests^##
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml
+MAKEFILE;
+
+        self::assertSame($input, ServiceLifecycleInjector::inject($input));
+    }
+
+    #[Test]
     #[DataProvider('provideInjectServiceLifecycleCases')]
     public function injectServiceLifecycle(
         string $makefileContents,
@@ -24,6 +35,54 @@ final class ServiceLifecycleTest extends TestCase
 
         self::assertStringContainsString($expectedNeedle, $result);
         self::assertStringNotContainsString($unexpectedNeedle, $result);
+    }
+
+    #[Test]
+    public function injectBuildsCiAndLocalRecipesWithExactFormatting(): void
+    {
+        $input = <<<'MAKEFILE'
+extra-services-up: ####
+	docker compose up -d --wait
+
+extra-services-down: ####
+	docker compose down
+
+unit-testing: ## Run tests ##*AE*##^unit-tests^##
+	service_start(extra-services-up)
+	  vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml
+	service_cleanup(extra-services-down)
+MAKEFILE;
+
+        $result = ServiceLifecycleInjector::inject($input);
+
+        self::assertStringContainsString(
+            <<<'MAKEFILE'
+ifeq ("$(IN_CI)","TRUE")
+	vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml
+else
+	@bash -ec '	$(MAKE) extra-services-up; \
+	trap "$(MAKE) extra-services-down || true" EXIT; \
+	vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml'
+endif
+MAKEFILE,
+            $result,
+        );
+    }
+
+    #[Test]
+    public function injectRestoresMiddleLinesWhenServiceTargetsAreMissing(): void
+    {
+        $input = <<<'MAKEFILE'
+unit-testing: ## Run tests ##*AE*##^unit-tests^##
+	service_start(extra-services-up)
+	  vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml
+	service_cleanup(extra-services-down)
+MAKEFILE;
+
+        $result = ServiceLifecycleInjector::inject($input);
+
+        self::assertStringContainsString("\t  vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml", $result);
+        self::assertStringNotContainsString('ifeq ("$(IN_CI)","TRUE")', $result);
     }
 
     /** @return iterable<string, array{string, string, string}> */

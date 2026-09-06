@@ -13,8 +13,10 @@ use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
 use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function chmod;
-use function file_exists;
 use function file_put_contents;
+use function glob;
+use function is_array;
+use function is_file;
 use function mkdir;
 use function symlink;
 
@@ -48,6 +50,59 @@ final class RequirementsCollectorTest extends TestCase
                 return $vendorDir;
             },
             ['php'],
+            ['php'],
+            false,
+            false,
+        ];
+
+        yield 'continues past invalid vendor json' => [
+            static function (self $test): string {
+                $root      = $test->getTmpDir() . 'continue-invalid-json/';
+                $vendorDir = $root . 'vendor/';
+                mkdir($vendorDir . 'broken/pkg', 0755, true);
+                mkdir($vendorDir . 'valid/pkg', 0755, true);
+                file_put_contents($vendorDir . 'broken/pkg/composer.json', 'not-json');
+                file_put_contents($vendorDir . 'valid/pkg/composer.json', '{"require-dev":{"vendor/dev-pkg":"^1"}}');
+
+                return $vendorDir;
+            },
+            ['php', 'vendor/dev-pkg'],
+            ['php'],
+            false,
+            false,
+        ];
+
+        yield 'continues past unreadable vendor json' => [
+            static function (self $test): string {
+                $root           = $test->getTmpDir() . 'continue-unreadable-json/';
+                $vendorDir      = $root . 'vendor/';
+                $unreadablePath = $vendorDir . 'broken/pkg/composer.json';
+                mkdir($vendorDir . 'broken/pkg', 0755, true);
+                mkdir($vendorDir . 'valid/pkg', 0755, true);
+                file_put_contents($unreadablePath, '{"require":{"vendor/skipped":"^1"}}');
+                file_put_contents($vendorDir . 'valid/pkg/composer.json', '{"require-dev":{"vendor/dev-pkg":"^1"}}');
+                chmod($unreadablePath, 0000);
+
+                return $vendorDir;
+            },
+            ['php', 'vendor/dev-pkg'],
+            ['php'],
+            true,
+            false,
+        ];
+
+        yield 'continues past vendor package without require-dev' => [
+            static function (self $test): string {
+                $root      = $test->getTmpDir() . 'continue-no-require-dev/';
+                $vendorDir = $root . 'vendor/';
+                mkdir($vendorDir . 'no-dev/pkg', 0755, true);
+                mkdir($vendorDir . 'with-dev/pkg', 0755, true);
+                file_put_contents($vendorDir . 'no-dev/pkg/composer.json', '{"require":{"vendor/skipped":"^1"}}');
+                file_put_contents($vendorDir . 'with-dev/pkg/composer.json', '{"require-dev":{"vendor/dev-pkg":"^1"}}');
+
+                return $vendorDir;
+            },
+            ['php', 'vendor/dev-pkg'],
             ['php'],
             false,
             false,
@@ -99,6 +154,22 @@ final class RequirementsCollectorTest extends TestCase
             false,
         ];
 
+        yield 'continues past vendor composer.json directory' => [
+            static function (self $test): string {
+                $root      = $test->getTmpDir() . 'continue-composer-json-directory/';
+                $vendorDir = $root . 'vendor/';
+                mkdir($vendorDir . 'aaa/foo/composer.json', 0755, true);
+                mkdir($vendorDir . 'zzz/bar', 0755, true);
+                file_put_contents($vendorDir . 'zzz/bar/composer.json', '{"require-dev":{"vendor/dev-pkg":"^1"}}');
+
+                return $vendorDir;
+            },
+            ['php', 'vendor/dev-pkg'],
+            ['php'],
+            false,
+            false,
+        ];
+
         yield 'skips broken vendor json symlink' => [
             static function (self $test): string {
                 $root      = $test->getTmpDir() . 'broken-vendor-json/';
@@ -109,6 +180,23 @@ final class RequirementsCollectorTest extends TestCase
                 return $vendorDir;
             },
             ['php'],
+            ['php'],
+            false,
+            true,
+        ];
+
+        yield 'continues past broken vendor json symlink' => [
+            static function (self $test): string {
+                $root      = $test->getTmpDir() . 'continue-broken-symlink/';
+                $vendorDir = $root . 'vendor/';
+                mkdir($vendorDir . 'aaa/bar', 0755, true);
+                symlink($root . 'missing-composer.json', $vendorDir . 'aaa/bar/composer.json');
+                mkdir($vendorDir . 'zzz/valid', 0755, true);
+                file_put_contents($vendorDir . 'zzz/valid/composer.json', '{"require-dev":{"vendor/dev-pkg":"^1"}}');
+
+                return $vendorDir;
+            },
+            ['php', 'vendor/dev-pkg'],
             ['php'],
             false,
             true,
@@ -156,9 +244,16 @@ final class RequirementsCollectorTest extends TestCase
 
             self::assertNotContains('vendor/dev-pkg', $requirements->withoutDev);
         } finally {
-            $unreadable = $vendorDir . 'foo/bar/composer.json';
-            if (file_exists($unreadable)) {
-                chmod($unreadable, 0644);
+            $composerJsonGlob = glob($vendorDir . '*/*/composer.json');
+
+            if (is_array($composerJsonGlob)) {
+                foreach ($composerJsonGlob as $composerJson) {
+                    if (! is_file($composerJson)) {
+                        continue;
+                    }
+
+                    chmod($composerJson, 0644);
+                }
             }
         }
     }

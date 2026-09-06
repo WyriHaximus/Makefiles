@@ -43,6 +43,26 @@ final class ExtraServicesDetectionTest extends TestCase
     }
 
     #[Test]
+    public function injectLeavesMakefileUntouchedWhenNoPlaceholders(): void
+    {
+        $input = "HAS_EXTRA_SERVICES=FALSE\nOTHER=VALUE\n";
+
+        self::assertSame($input, ExtraServicesInjector::inject($input, $this->getTmpDir()));
+    }
+
+    #[Test]
+    public function injectLeavesMakefileUntouchedWhenNoPlaceholdersEvenWithEtcMakefile(): void
+    {
+        $rootPackagePath = $this->getTmpDir();
+        $etcDir          = $rootPackagePath . 'etc' . DIRECTORY_SEPARATOR;
+        mkdir($etcDir);
+        file_put_contents($etcDir . 'Makefile', "extra-services-up: ####\n\tdocker compose up -d --wait\n");
+        $input = "HAS_EXTRA_SERVICES=FALSE\nOTHER=VALUE\n";
+
+        self::assertSame($input, ExtraServicesInjector::inject($input, $rootPackagePath));
+    }
+
+    #[Test]
     public function injectExtraServicesFlagWithoutEtcMakefile(): void
     {
         $rootPackagePath = $this->getTmpDir();
@@ -128,5 +148,20 @@ MAKEFILE;
         $result = DirectDockerDetector::injectExtraServicesDirectDockerFlags($input);
 
         self::assertStringContainsString('ALL_HAS_DIRECT_DOCKER_TASKS=FALSE', $result);
+    }
+
+    #[Test]
+    public function injectExtraServicesDirectDockerFlagsDoesNotMatchPartialFlagNames(): void
+    {
+        $input = <<<'MAKEFILE'
+HAS_EXTRA_SERVICES=TRUE
+ALL_HAS_DIRECT_DOCKER_TASKS_EXTRA=FALSE
+ALL_HAS_DIRECT_DOCKER_TASKS=FALSE
+MAKEFILE;
+
+        $result = DirectDockerDetector::injectExtraServicesDirectDockerFlags($input);
+
+        self::assertStringContainsString('ALL_HAS_DIRECT_DOCKER_TASKS=TRUE', $result);
+        self::assertStringContainsString('ALL_HAS_DIRECT_DOCKER_TASKS_EXTRA=FALSE', $result);
     }
 }

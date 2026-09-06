@@ -6,6 +6,7 @@ namespace WyriHaximus\Tests\Makefiles\Composer\Installer;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionMethod;
 use RuntimeException;
 use WyriHaximus\Makefiles\Composer\Installer\DirectDockerDetector;
 use WyriHaximus\Tests\Makefiles\TestCase;
@@ -88,6 +89,57 @@ final class DirectDockerDetectorTest extends TestCase
             true,
         ];
 
+        yield 'recipe after blank line' => [
+            "blank-line-recipe: ## recipe ##*I*##\n\n\tdocker run --rm image cmd\n",
+            'blank-line-recipe',
+            true,
+        ];
+
+        yield 'custom docker wrapper after framework variable' => [
+            <<<'MAKEFILE'
+DOCKER_RUN:=docker run --rm ghcr.io/example/php:8.4-dev
+CUSTOM_TOOL=docker run --rm hashicorp/terraform:1.14.8
+
+terraform-fmt: ## fmt ##*I*##
+	$(CUSTOM_TOOL) fmt
+MAKEFILE,
+            'terraform-fmt',
+            true,
+        ];
+
+        yield 'defined docker wrapper unused in recipe' => [
+            "MYTOOL=docker run image\n\nupdate-k6-repositories: ## update ##*I*##\n\tphp bin/update-k6-repositories.php\n",
+            'update-k6-repositories',
+            false,
+        ];
+
+        yield 'target with header only at eof' => [
+            'solo-target: ## solo ##*I*##',
+            'solo-target',
+            false,
+        ];
+
+        yield 'recipe stops before next target' => [
+            <<<'MAKEFILE'
+fmt: ## fmt ##*I*##
+	echo local fmt
+next-target: ## next ##*I*##
+	docker run --rm image fmt
+MAKEFILE,
+            'fmt',
+            false,
+        ];
+
+        yield 'recipe ignores garbage before first recipe line' => [
+            <<<'MAKEFILE'
+fmt: ## fmt ##*I*##
+garbage before recipe
+	docker run --rm image fmt
+MAKEFILE,
+            'fmt',
+            false,
+        ];
+
         yield 'service lifecycle ifeq block recurses to docker compose' => [
             <<<'MAKEFILE'
 before-unit-tests-service: ####
@@ -147,5 +199,24 @@ MAKEFILE,
         }
 
         self::assertStringContainsString($expectedFragment, $result);
+    }
+
+    #[Test]
+    public function recipeUsesDockerWrapperVariableQuotesRegexSpecialCharacters(): void
+    {
+        $method = new ReflectionMethod(DirectDockerDetector::class, 'recipeUsesDockerWrapperVariable');
+
+        self::assertFalse($method->invoke(null, "\t\$(A1B) fmt\n", ['A.B' => true]));
+        self::assertTrue($method->invoke(null, "\t\$(A.B) fmt\n", ['A.B' => true]));
+        self::assertTrue($method->invoke(null, "\t\${A.B} fmt\n", ['A.B' => true]));
+    }
+
+    #[Test]
+    public function extractTargetRecipeReturnsEmptyStringForHeaderOnlyTarget(): void
+    {
+        $method = new ReflectionMethod(DirectDockerDetector::class, 'extractTargetRecipe');
+
+        self::assertSame('', $method->invoke(null, "solo-target: ## solo ##*I*##\n", 'solo-target'));
+        self::assertSame('', $method->invoke(null, "empty-recipe: ## empty ##*I*##\nother-target: ## other ##\n\techo other\n", 'empty-recipe'));
     }
 }

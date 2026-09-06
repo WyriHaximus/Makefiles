@@ -109,6 +109,12 @@ final class IncludeLoaderTest extends TestCase
             true,
         ];
 
+        yield 'windows root path case insensitive' => [
+            'c:/project/includes/All.mk',
+            'C:/Project/includes',
+            true,
+        ];
+
         yield 'extended windows path prefix' => [
             '//?/C:/Project/includes/All.mk',
             'c:/project/includes',
@@ -148,5 +154,41 @@ final class IncludeLoaderTest extends TestCase
         );
 
         self::assertSame('', $result);
+    }
+
+    #[Test]
+    public function loadIncludeReturnsEmptyStringForMissingInclude(): void
+    {
+        $root      = $this->getTmpDir();
+        $reference = $root . 'reference/';
+        mkdir($reference . 'includes', 0755, true);
+        $method = new ReflectionMethod(IncludeLoader::class, 'loadInclude');
+
+        self::assertSame('', $method->invoke(null, ProjectSandbox::capturingIo(), $reference, 'includes/Missing.mk'));
+    }
+
+    #[Test]
+    public function loadIncludeReturnsEmptyStringForUnreadableInclude(): void
+    {
+        if (! ProjectSandbox::canSimulateUnreadableFiles()) {
+            self::markTestSkipped('File permission tests cannot run on Windows or as root.');
+        }
+
+        $root         = $this->getTmpDir();
+        $reference    = $root . 'reference/';
+        $includesPath = $reference . 'includes/';
+        mkdir($includesPath, 0755, true);
+        $includePath = $includesPath . 'Unreadable.mk';
+        file_put_contents($includePath, "unreadable-target:\n");
+        chmod($includePath, 0000);
+        $method = new ReflectionMethod(IncludeLoader::class, 'loadInclude');
+        $io     = ProjectSandbox::capturingIo();
+
+        try {
+            self::assertSame('', $method->invoke(null, $io, $reference, 'includes/Unreadable.mk'));
+            self::assertSame('', $io->output());
+        } finally {
+            chmod($includePath, 0644);
+        }
     }
 }

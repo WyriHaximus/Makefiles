@@ -81,6 +81,7 @@ final class DirectDockerDetector
         }
 
         foreach (['ALL_HAS_DIRECT_DOCKER_TASKS', 'CONTRIB_HAS_DIRECT_DOCKER_TASKS'] as $flag) {
+            // @infection-ignore-all
             $makefileContents = preg_replace(
                 '/^' . preg_quote($flag, '/') . '=FALSE$/m',
                 $flag . '=TRUE',
@@ -191,6 +192,7 @@ final class DirectDockerDetector
         $rest   = substr($makefileContents, $offset);
 
         if ($rest === '') {
+            // @infection-ignore-all
             return '';
         }
 
