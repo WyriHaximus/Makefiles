@@ -53,6 +53,7 @@ final class MakefileGenerator
         $makefileContents = RequirementConditionalInjector::inject($makefileContents, $context->requirements->all);
         $makefileContents = LowestVersionInjector::inject($makefileContents, $context->rootPackagePath);
         $makefileContents = SupportedFeaturesInjector::inject($makefileContents, $context->supportedFeatures);
+        $makefileContents = SupportedFeatureConditionalInjector::inject($makefileContents, $context->supportedFeatures);
         $makefileContents = Base64FileInjector::inject($makefileContents);
 
         self::writeMakefile(self::makefilePath($context->rootPackagePath), $makefileContents);

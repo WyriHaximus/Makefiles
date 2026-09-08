@@ -21,3 +21,6 @@ migrations-supported-features-php-ensure-no-composer-require-checker-config-file
 
 migrations-supported-features-php-ensure-no-composer-unused-config-file-is-present-when-composer-dependency-checkers-are-disabled: #### Ensure we remove the Composer Unused config file when composer-dependency-checkers aren't enabled ##*I*##
 	($(DOCKER_RUN) php -r 'if (in_array("composer-dependency-checkers", supported-features(raw))) {exit;} @unlink("etc/qa/composer-unused.php");' || true)
+
+migrations-supported-features-php-ensure-no-zzz-disable-otel-attr-hooks-ini-when-opentelemetry-instrumentation-is-enabled: #### Ensure we remove `etc/qa/zzz_disable_otel_attr_hooks.ini` when opentelemetry-instrumentation is enabled ##*I*##
+	($(DOCKER_RUN) php -r 'if (!in_array("opentelemetry-instrumentation", supported-features(raw))) {exit;} @unlink("etc/qa/zzz_disable_otel_attr_hooks.ini");' || true)
