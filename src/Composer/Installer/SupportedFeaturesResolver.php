@@ -7,8 +7,11 @@ namespace WyriHaximus\Makefiles\Composer\Installer;
 use WyriHaximus\Makefiles\Composer\SupportedFeatures;
 
 use function array_key_exists;
+use function in_array;
 use function is_array;
 use function is_bool;
+use function is_string;
+use function str_ends_with;
 
 final class SupportedFeaturesResolver
 {
@@ -41,6 +44,10 @@ final class SupportedFeaturesResolver
             $supportedFeatures[SupportedFeatures::FEATURE_WINDOWS] = false;
         }
 
+        if (self::isOpenTelemetryInstrumentationPackage($json, $requirements)) {
+            $supportedFeatures[SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION] = true;
+        }
+
         if (
             array_key_exists('extra', $json)
             && is_array($json['extra'])
@@ -63,5 +70,33 @@ final class SupportedFeaturesResolver
         }
 
         return $supportedFeatures;
+    }
+
+    /** @param array<mixed> $json */
+    private static function isOpenTelemetryInstrumentationPackage(array $json, Requirements $requirements): bool
+    {
+        if (! in_array('ext-opentelemetry', $requirements->withoutDev, true)) {
+            return false;
+        }
+
+        if (! array_key_exists('autoload', $json) || ! is_array($json['autoload'])) {
+            return false;
+        }
+
+        if (! array_key_exists('files', $json['autoload']) || ! is_array($json['autoload']['files'])) {
+            return false;
+        }
+
+        foreach ($json['autoload']['files'] as $file) {
+            if (! is_string($file)) {
+                continue;
+            }
+
+            if (str_ends_with($file, '_register.php')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

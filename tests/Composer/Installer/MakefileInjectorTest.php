@@ -11,6 +11,7 @@ use WyriHaximus\Makefiles\Composer\Installer\HelpInjector;
 use WyriHaximus\Makefiles\Composer\Installer\LowestVersionInjector;
 use WyriHaximus\Makefiles\Composer\Installer\RequirementConditionalInjector;
 use WyriHaximus\Makefiles\Composer\Installer\Requirements;
+use WyriHaximus\Makefiles\Composer\Installer\SupportedFeatureConditionalInjector;
 use WyriHaximus\Makefiles\Composer\Installer\SupportedFeaturesInjector;
 use WyriHaximus\Makefiles\Composer\Installer\SupportedFeaturesResolver;
 use WyriHaximus\Makefiles\Composer\SupportedFeatures;
@@ -56,6 +57,40 @@ final class MakefileInjectorTest extends TestCase
             'NEEDS_DOCKER_SOCKET=when_in_requirements([broken], TRUE, FALSE)',
             ['php'],
             'NEEDS_DOCKER_SOCKET=FALSE',
+        ];
+    }
+
+    /** @return iterable<string, array{string, array<string, bool>, string}> */
+    public static function provideSupportedFeatureConditionalCases(): iterable
+    {
+        yield 'feature enabled omits otel silencing' => [
+            'OPS when_supported_feature("opentelemetry-instrumentation", "", -e OTEL_PHP_DISABLED_INSTRUMENTATIONS="all")',
+            array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
+            'OPS ',
+        ];
+
+        yield 'feature disabled keeps otel silencing' => [
+            'OPS when_supported_feature("opentelemetry-instrumentation", "", -e OTEL_PHP_DISABLED_INSTRUMENTATIONS="all")',
+            SupportedFeatures::DEFAULTS,
+            'OPS -e OTEL_PHP_DISABLED_INSTRUMENTATIONS="all"',
+        ];
+
+        yield 'unknown feature uses whenFalse branch' => [
+            'OPS when_supported_feature("unknown-feature", enabled, disabled)',
+            SupportedFeatures::DEFAULTS,
+            'OPS disabled',
+        ];
+
+        yield 'quoted whenFalse branch strips quotes' => [
+            'OPS when_supported_feature("unknown-feature", "enabled", "disabled")',
+            SupportedFeatures::DEFAULTS,
+            'OPS disabled',
+        ];
+
+        yield 'quoted whenTrue branch strips quotes' => [
+            'OPS when_supported_feature("opentelemetry-instrumentation", "enabled", "disabled")',
+            array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
+            'OPS enabled',
         ];
     }
 
@@ -178,6 +213,87 @@ MAKEFILE,
             new Requirements([], []),
             array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_UNIT_TESTS => false]),
         ];
+
+        yield 'opentelemetry instrumentation package auto-detect' => [
+            [
+                'autoload' => [
+                    'files' => ['src/_register.php'],
+                ],
+            ],
+            new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
+        ];
+
+        yield 'ext-opentelemetry without register file' => [
+            [
+                'autoload' => [
+                    'files' => ['src/bootstrap.php'],
+                ],
+            ],
+            new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            SupportedFeatures::DEFAULTS,
+        ];
+
+        yield 'ext-opentelemetry without autoload' => [
+            [],
+            new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            SupportedFeatures::DEFAULTS,
+        ];
+
+        yield 'ext-opentelemetry without autoload files' => [
+            [
+                'autoload' => [
+                    'psr-4' => ['App\\' => 'src/'],
+                ],
+            ],
+            new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            SupportedFeatures::DEFAULTS,
+        ];
+
+        yield 'ext-opentelemetry with non-string autoload file' => [
+            [
+                'autoload' => [
+                    'files' => [123],
+                ],
+            ],
+            new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            SupportedFeatures::DEFAULTS,
+        ];
+
+        yield 'ext-opentelemetry with non-string before register file' => [
+            [
+                'autoload' => [
+                    'files' => [123, 'src/_register.php'],
+                ],
+            ],
+            new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
+        ];
+
+        yield 'register file with ext-opentelemetry only in dev' => [
+            [
+                'autoload' => [
+                    'files' => ['src/_register.php'],
+                ],
+            ],
+            new Requirements(['ext-opentelemetry'], []),
+            SupportedFeatures::DEFAULTS,
+        ];
+
+        yield 'opentelemetry instrumentation manual override off' => [
+            [
+                'autoload' => [
+                    'files' => ['src/_register.php'],
+                ],
+                'extra' => [
+                    'wyrihaximus' => [
+                        'supported-features' => [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => false],
+                    ],
+                ],
+            ],
+            new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            SupportedFeatures::DEFAULTS,
+        ];
     }
 
     /** @param list<string> $requirements */
@@ -186,6 +302,14 @@ MAKEFILE,
     public function requirementConditionalInject(string $template, array $requirements, string $expected): void
     {
         self::assertSame($expected, RequirementConditionalInjector::inject($template, $requirements));
+    }
+
+    /** @param array<string, bool> $supportedFeatures */
+    #[Test]
+    #[DataProvider('provideSupportedFeatureConditionalCases')]
+    public function supportedFeatureConditionalInject(string $template, array $supportedFeatures, string $expected): void
+    {
+        self::assertSame($expected, SupportedFeatureConditionalInjector::inject($template, $supportedFeatures));
     }
 
     #[Test]
