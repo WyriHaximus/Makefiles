@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
-use function array_map;
 use function implode;
 use function preg_match;
 use function preg_match_all;
@@ -19,6 +18,13 @@ use function usort;
 
 final class HelpInjector
 {
+    private const array HELP_HEADER_LINES = [
+        '@printf "\033[33mUsage:\033[0m\n"',
+        '@printf "  make [target]\n"',
+        '@printf "\n"',
+        '@printf "\033[33mTargets:\033[0m\n"',
+    ];
+
     private function __construct()
     {
     }
@@ -82,21 +88,34 @@ final class HelpInjector
         foreach ($helpTargets as $helpType => $entries) {
             usort($entries, static fn (array $a, array $b): int => $a[0] <=> $b[0]);
 
-            $helpList = implode(
-                '\n',
-                array_map(
-                    static fn (array $entry): string => str_replace("'", "'\\''", $entry[1]),
-                    $entries,
-                ),
-            );
-
             $makefileContents = str_replace(
                 'help(' . $helpType . ')',
-                "'" . $helpList . "'",
+                self::formatHelpRecipe($entries),
                 $makefileContents,
             );
         }
 
         return $makefileContents;
+    }
+
+    /** @param list<array{0: string, 1: string}> $entries */
+    private static function formatHelpRecipe(array $entries): string
+    {
+        $lines = self::HELP_HEADER_LINES;
+
+        foreach ($entries as $entry) {
+            $description = substr($entry[1], strlen($entry[0]) + 5);
+            $lines[]     = '@printf "  \033[32m%-32s\033[0m %s\n" '
+                . self::shellQuote($entry[0])
+                . ' '
+                . self::shellQuote($description);
+        }
+
+        return implode("\n\t", $lines);
+    }
+
+    private static function shellQuote(string $value): string
+    {
+        return "'" . str_replace("'", "'\\''", $value) . "'";
     }
 }
