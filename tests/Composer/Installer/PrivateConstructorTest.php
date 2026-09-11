@@ -7,6 +7,7 @@ namespace WyriHaximus\Tests\Makefiles\Composer\Installer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
+use WyriHaximus\Makefiles\Composer\Installer\FigletFont;
 use WyriHaximus\Makefiles\Composer\Installer\MakefileGenerationContext;
 use WyriHaximus\Makefiles\Composer\Installer\Requirements;
 use WyriHaximus\Tests\Makefiles\TestCase;
@@ -19,6 +20,7 @@ use function in_array;
 final class PrivateConstructorTest extends TestCase
 {
     private const array EXCLUDED = [
+        FigletFont::class,
         Requirements::class,
         MakefileGenerationContext::class,
     ];

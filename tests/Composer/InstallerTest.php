@@ -107,6 +107,23 @@ final class InstallerTest extends TestCase
     }
 
     #[Test]
+    public function findEventListenersGeneratesMakefileForConsumerWithOnlyMakefilesInRequireDev(): void
+    {
+        $root      = $this->getTmpDir() . 'consumer-only-makefiles/';
+        $vendorDir = $root . 'vendor/';
+        mkdir($vendorDir . 'wyrihaximus/makefiles', 0755, true);
+        ProjectSandbox::mirrorPackage(ProjectSandbox::packageSourceRoot() . DIRECTORY_SEPARATOR, $vendorDir . 'wyrihaximus/makefiles/');
+        file_put_contents(
+            $root . 'composer.json',
+            '{"name":"example/consumer-only-makefiles","require-dev":{"wyrihaximus/makefiles":"dev-main"}}',
+        );
+
+        Installer::findEventListeners(ComposerFixture::event($vendorDir));
+
+        self::assertFileExists($root . 'Makefile');
+    }
+
+    #[Test]
     public function generate(): void
     {
         $projectRoot = ProjectSandbox::mirroredProject($this->getTmpDir());
