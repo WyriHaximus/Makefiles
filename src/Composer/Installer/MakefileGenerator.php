@@ -49,7 +49,7 @@ final class MakefileGenerator
         $makefileContents = ExtraServicesInjector::inject($makefileContents, $context->rootPackagePath);
         $makefileContents = ServiceLifecycleInjector::inject($makefileContents);
         $makefileContents = TaskListInjector::inject($context, $makefileContents);
-        $makefileContents = HelpInjector::inject($makefileContents);
+        $makefileContents = HelpInjector::inject($makefileContents, $context->rootPackagePath);
         $makefileContents = RequirementConditionalInjector::inject($makefileContents, $context->requirements->all);
         $makefileContents = LowestVersionInjector::inject($makefileContents, $context->rootPackagePath);
         $makefileContents = SupportedFeaturesInjector::inject($makefileContents, $context->supportedFeatures);
