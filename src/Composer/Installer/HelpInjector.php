@@ -29,8 +29,9 @@ final class HelpInjector
     {
     }
 
-    public static function inject(string $makefileContents): string
+    public static function inject(string $makefileContents, string $rootPackagePath): string
     {
+        $bannerLines = AsciiBannerGenerator::forPackage($rootPackagePath);
         /** @var array<string, list<array{0: string, 1: string}>> $helpTargets */
         $helpTargets = [
             'main' => [],
@@ -85,12 +86,19 @@ final class HelpInjector
             ];
         }
 
-        foreach ($helpTargets as $helpType => $entries) {
+        foreach (['main', 'migrations', 'contrib'] as $helpType) {
+            $entries = $helpTargets[$helpType];
             usort($entries, static fn (array $a, array $b): int => $a[0] <=> $b[0]);
+
+            $helpBannerLines = match ($helpType) {
+                'main' => $bannerLines,
+                'migrations' => AsciiBannerGenerator::forText('migrations'),
+                'contrib' => AsciiBannerGenerator::forText('contrib'),
+            };
 
             $makefileContents = str_replace(
                 'help(' . $helpType . ')',
-                self::formatHelpRecipe($entries),
+                self::formatHelpRecipe($entries, $helpBannerLines),
                 $makefileContents,
             );
         }
@@ -98,10 +106,23 @@ final class HelpInjector
         return $makefileContents;
     }
 
-    /** @param list<array{0: string, 1: string}> $entries */
-    private static function formatHelpRecipe(array $entries): string
+    /**
+     * @param list<array{0: string, 1: string}> $entries
+     * @param list<string>                      $bannerLines
+     */
+    private static function formatHelpRecipe(array $entries, array $bannerLines = []): string
     {
-        $lines = self::HELP_HEADER_LINES;
+        $lines = [];
+
+        foreach ($bannerLines as $bannerLine) {
+            $lines[] = '@printf "%s\n" ' . self::shellQuote($bannerLine);
+        }
+
+        if ($bannerLines !== []) {
+            $lines[] = '@printf "\n"';
+        }
+
+        $lines = [...$lines, ...self::HELP_HEADER_LINES];
 
         foreach ($entries as $entry) {
             $description = substr($entry[1], strlen($entry[0]) + 5);
