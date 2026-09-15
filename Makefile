@@ -556,6 +556,11 @@ run: ## Provides access in the expected environment to run a single command and 
 	$(DOCKER_RUN) $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
 help: ## Show this help ####
+	@printf "%s\n" '                                                                                              _'
+	@printf "%s\n" '             ._   o   |_     _.        o   ._ _           _    /   ._ _     _.   |     _    _|_   o   |    _     _'
+	@printf "%s\n" ' \/\/   \/   |    |   | |   (_|   ><   |   | | |   |_|   _>   /    | | |   (_|   |<   (/_    |    |   |   (/_   _>'
+	@printf "%s\n" '        /'
+	@printf "\n"
 	@printf "\033[33mUsage:\033[0m\n"
 	@printf "  make [target]\n"
 	@printf "\n"
@@ -603,6 +608,11 @@ help: ## Show this help ####
 	@printf "  \033[32m%-32s\033[0m %s\n" 'update-lock' 'Update lockfile'
 
 help-migrations: ## Show the migrations help ####
+	@printf "%s\n" ''
+	@printf "%s\n" ' ._ _    o    _    ._    _.   _|_   o    _    ._     _'
+	@printf "%s\n" ' | | |   |   (_|   |    (_|    |_   |   (_)   | |   _>'
+	@printf "%s\n" '              _|'
+	@printf "\n"
 	@printf "\033[33mUsage:\033[0m\n"
 	@printf "  make [target]\n"
 	@printf "\n"
@@ -718,6 +728,11 @@ help-migrations: ## Show the migrations help ####
 	@printf "  \033[32m%-32s\033[0m %s\n" 'migrations-supported-features-php-ensure-we-only-staticly-analyse-tests-with-phpstan-if-unit-tests-is-enabled' 'Ensure we only staticly analyse tests/ with PHPStan if unit-tests is enabled'
 
 help-contrib: ## Show the migrations help ####
+	@printf "%s\n" ''
+	@printf "%s\n" '  _    _    ._    _|_   ._   o   |_'
+	@printf "%s\n" ' (_   (_)   | |    |_   |    |   |_)'
+	@printf "%s\n" ''
+	@printf "\n"
 	@printf "\033[33mUsage:\033[0m\n"
 	@printf "  make [target]\n"
 	@printf "\n"

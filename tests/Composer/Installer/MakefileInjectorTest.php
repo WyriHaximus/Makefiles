@@ -104,7 +104,7 @@ final class MakefileInjectorTest extends TestCase
         yield 'non-scalar leaf' => [true, '{"config":{"platform":{"php":[]}}}', 'PHP_VERSION="0.0"'];
     }
 
-    /** @return iterable<string, array{string, list<string>, list<string>}> */
+    /** @return iterable<string, array{string, string, list<string>, list<string>}> */
     public static function provideHelpCases(): iterable
     {
         yield 'builds main migrations and contrib help lists' => [
@@ -117,6 +117,7 @@ migrations-docs-fix: ## Migration task ####
 beta: ## Beta contrib ##*E*##
 hidden: ## Hidden ##U##
 MAKEFILE,
+            '',
             [
                 '@printf "\033[33mUsage:\033[0m\n"',
                 '@printf "  make [target]\n"',
@@ -125,12 +126,37 @@ MAKEFILE,
                 '@printf "  \033[32m%-32s\033[0m %s\n" \'alpha\' \'Alpha task\'',
                 '@printf "  \033[32m%-32s\033[0m %s\n" \'beta\' \'Beta contrib\'',
                 '@printf "  \033[32m%-32s\033[0m %s\n" \'migrations-docs-fix\' \'Migration task\'',
+                '@printf "%s\n" \' ._ _    o    _    ._    _.   _|_   o    _    ._     _\'',
+                '@printf "%s\n" \'  _    _    ._    _|_   ._   o   |_\'',
             ],
             ["'hidden: ## Hidden", 'help(main)', '| awk', '@printf "\033[33mUsage:\033[0m\n  make [target]'],
         ];
 
+        yield 'builds main help with package banner' => [
+            "help(main)\nalpha: ## Alpha task ####\n",
+            '{"name":"vendor/package"}',
+            [
+                '@printf "%s\n" \'       _    ._     _|    _    ._    /   ._     _.    _   |     _.    _     _\'',
+                '@printf "\033[33mUsage:\033[0m\n"',
+                '@printf "  \033[32m%-32s\033[0m %s\n" \'alpha\' \'Alpha task\'',
+            ],
+            ['help(main)'],
+        ];
+
+        yield 'builds migrations help with command banner' => [
+            "help(migrations)\nmigrations-docs-fix: ## Migration task ####\n",
+            '',
+            [
+                '@printf "%s\n" \' ._ _    o    _    ._    _.   _|_   o    _    ._     _\'',
+                '@printf "\033[33mUsage:\033[0m\n"',
+                '@printf "  \033[32m%-32s\033[0m %s\n" \'migrations-docs-fix\' \'Migration task\'',
+            ],
+            ['help(migrations)'],
+        ];
+
         yield 'skips malformed help lines' => [
             "broken-line-without-proper-format\nvalid: ## Valid ####\nhelp(main)\n",
+            '',
             ['@printf "  \033[32m%-32s\033[0m %s\n" \'valid\' \'Valid\'', '@printf "\033[33mUsage:\033[0m\n"'],
             ["'broken-line", 'help(main)', '| awk', "valid: ## Valid\\n"],
         ];
@@ -340,9 +366,16 @@ MAKEFILE,
      */
     #[Test]
     #[DataProvider('provideHelpCases')]
-    public function helpInject(string $input, array $contains, array $notContains): void
+    public function helpInject(string $input, string $composerJson, array $contains, array $notContains): void
     {
-        $result = HelpInjector::inject($input);
+        $root = $this->getTmpDir() . 'help-project/';
+        mkdir($root);
+
+        if ($composerJson !== '') {
+            file_put_contents($root . 'composer.json', $composerJson);
+        }
+
+        $result = HelpInjector::inject($input, $root);
 
         foreach ($contains as $needle) {
             self::assertStringContainsString($needle, $result);

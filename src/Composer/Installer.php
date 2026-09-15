@@ -16,10 +16,8 @@ use WyriHaximus\Makefiles\Composer\Installer\RequirementsCollector;
 use WyriHaximus\Makefiles\Composer\Installer\SupportedFeaturesResolver;
 
 use function array_key_exists;
-use function array_keys;
 use function assert;
 use function dirname;
-use function file_exists;
 use function file_get_contents;
 use function is_array;
 use function is_file;
@@ -64,10 +62,6 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         $vendorDir       = $composer->getConfig()->get('vendor-dir');
         $rootPackagePath = dirname($vendorDir) . DIRECTORY_SEPARATOR;
 
-        if (! file_exists($rootPackagePath . '/composer.json')) {
-            return;
-        }
-
         $composerJsonPath = $rootPackagePath . '/composer.json';
         if (! is_file($composerJsonPath) || ! is_readable($composerJsonPath)) {
             return;
@@ -86,14 +80,12 @@ final class Installer implements PluginInterface, EventSubscriberInterface
 
         if (array_key_exists('name', $json) && $json['name'] === 'wyrihaximus/makefiles') {
             $selfRoot = true;
-        } elseif (array_key_exists('require-dev', $json) && is_array($json['require-dev'])) {
-            foreach (array_keys($json['require-dev']) as $package) {
-                if ($package === 'wyrihaximus/makefiles') {
-                    $selfRoot = false;
-
-                    break;
-                }
-            }
+        } elseif (
+            array_key_exists('require-dev', $json)
+            && is_array($json['require-dev'])
+            && array_key_exists('wyrihaximus/makefiles', $json['require-dev'])
+        ) {
+            $selfRoot = false;
         }
 
         if ($selfRoot === null) {
