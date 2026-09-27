@@ -6,5 +6,63 @@
     "constraints": {
         "php": "8.4.x",
         "composer": "2.x"
-    }
+    },
+    "customManagers": [
+        {
+            "customType": "regex",
+            "description": "WyriHaximus/github-workflows pin migration preg_replace replacement",
+            "managerFilePatterns": [
+                "/includes/GitHub\\.Actions\\.Migrations\\.mk/"
+            ],
+            "depNameTemplate": "WyriHaximus/github-workflows",
+            "datasourceTemplate": "github-tags",
+            "versioningTemplate": "semver-coerced",
+            "matchStrings": [
+                "@(?<currentDigest>[a-f0-9]{40}) # (?<currentValue>v\\d+\\.\\d+\\.\\d+)\""
+            ],
+            "autoReplaceStringTemplate": "@{{{newDigest}}} # {{{newValue}}}\""
+        },
+        {
+            "customType": "regex",
+            "description": "WyriHaximus/github-workflows pin migration help SHA and version",
+            "managerFilePatterns": [
+                "/includes/GitHub\\.Actions\\.Migrations\\.mk/"
+            ],
+            "depNameTemplate": "WyriHaximus/github-workflows",
+            "datasourceTemplate": "github-tags",
+            "versioningTemplate": "semver-coerced",
+            "matchStrings": [
+                "SHA `(?<currentDigest>[a-f0-9]{40})` \\(`(?<currentValue>v\\d+\\.\\d+\\.\\d+)`\\)"
+            ],
+            "autoReplaceStringTemplate": "SHA `{{{newDigest}}}` (`{{{newValue}}}`)"
+        },
+        {
+            "customType": "regex",
+            "description": "WyriHaximus/github-workflows seeded workflow templates in etc/base64",
+            "managerFilePatterns": [
+                "/etc/base64/ci\\.yaml/",
+                "/etc/base64/release-management\\.yaml/"
+            ],
+            "depNameTemplate": "WyriHaximus/github-workflows",
+            "datasourceTemplate": "github-tags",
+            "versioningTemplate": "semver-coerced",
+            "matchStrings": [
+                "uses: WyriHaximus/github-workflows/.github/workflows/(?<workflowFile>[a-z0-9-]+)\\.yaml@(?<currentDigest>[a-f0-9]{40}) # (?<currentValue>v\\d+\\.\\d+\\.\\d+)"
+            ],
+            "autoReplaceStringTemplate": "uses: WyriHaximus/github-workflows/.github/workflows/{{workflowFile}}.yaml@{{{newDigest}}} # {{{newValue}}}"
+        }
+    ],
+    "packageRules": [
+        {
+            "description": "Group WyriHaximus/github-workflows workflow YAML and pin migration updates",
+            "groupName": "WyriHaximus/github-workflows",
+            "matchManagers": [
+                "github-actions",
+                "custom.regex"
+            ],
+            "matchPackageNames": [
+                "WyriHaximus/github-workflows"
+            ]
+        }
+    ]
 }
