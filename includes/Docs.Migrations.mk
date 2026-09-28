@@ -21,3 +21,6 @@ migrations-docs-update-license-copyright-year-to-current: #### Update license co
 
 migrations-docs-enforce-contributing-md-contents: #### Enforce CONTRIBUTING.md contents ##*I*##
 	($(DOCKER_RUN) php -r '$$contributingFile = "CONTRIBUTING.md"; $$contributingContents = base64_decode("base64(CONTRIBUTING-md)"); file_put_contents($$contributingFile, str_replace(["[repo]"], [basename(__DIR__)], $$contributingContents)); ' || true)
+
+migrations-docs-create-documentation-markdownlint-config-if-not-exists: #### Create `etc/qa/documentation.markdownlint-cli2.yaml` when missing ##*I*##
+	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/documentation.markdownlint-cli2.yaml"; if (file_exists($$configFile)) {exit;} if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(documentation.markdownlint-cli2.yaml)"));' || true)

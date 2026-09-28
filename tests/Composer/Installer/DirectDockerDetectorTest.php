@@ -41,6 +41,12 @@ final class DirectDockerDetectorTest extends TestCase
             true,
         ];
 
+        yield 'documentation markdownlint docker wrapper variable' => [
+            "DOCKER_RUN_MARKDOWNLINT=docker run --rm -i image:tag\n\ndocumentation-markdownlint: ## lint ##*K*##\n\t\$(DOCKER_RUN_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml\n",
+            'documentation-markdownlint',
+            true,
+        ];
+
         yield 'framework docker run variable is ignored' => [
             "DOCKER_RUN:=docker run --rm ghcr.io/example/php:8.4-dev\n\ncomposer-normalize: ## normalize ##*I*##\n\t\$(DOCKER_RUN) composer normalize\n",
             'composer-normalize',
@@ -199,6 +205,14 @@ MAKEFILE,
         }
 
         self::assertStringContainsString($expectedFragment, $result);
+    }
+
+    #[Test]
+    public function recipeUsesDockerWrapperVariableReturnsFalseWhenNoVariables(): void
+    {
+        $method = new ReflectionMethod(DirectDockerDetector::class, 'recipeUsesDockerWrapperVariable');
+
+        self::assertFalse($method->invoke(null, "\t\$(MYTOOL) fmt\n", []));
     }
 
     #[Test]

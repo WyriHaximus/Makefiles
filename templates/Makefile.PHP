@@ -49,9 +49,12 @@ ifeq ("$(IN_DOCKER)","TRUE")
 	DOCKER_RUN_WITH_SOCKET:=
 	DOCKER_SHELL:=
 	DOCKER_INTERACTIVE_SHELL:=
+	DOCKER_DEFAULT_SECURITY_OPS=
+	DOCKER_WORKSPACE_BIND_OPS=--volumes-from $$(cat /etc/hostname) -w "`pwd`"
 else
     ifeq ($(DOCKER_AVAILABLE),0)
         DOCKER_DEFAULT_SECURITY_OPS=--cap-drop=ALL --security-opt="no-new-privileges=true" --user="`id -u`:`id -g`"
+        DOCKER_WORKSPACE_BIND_OPS=-v "`pwd`:`pwd`" -w "`pwd`"
         DOCKER_COMMON_OPS:=-v "`pwd`:`pwd`" -w "`pwd`" -v "`pwd`/.git:`pwd`/.git:ro" -v "${COMPOSER_CACHE_DIR}:${COMPOSER_CONTAINER_CACHE_DIR}" --ulimit nofile=1000000 -e THREADS="${THREADS}" -e MUTATION_THREADS="${MUTATION_THREADS}" when_supported_feature("opentelemetry-instrumentation", "", -e OTEL_PHP_DISABLED_INSTRUMENTATIONS="all")
         ifneq ("$(wildcard etc/qa/zzz_disable_otel_attr_hooks.ini)","")
             DOCKER_COMMON_OPS:=${DOCKER_COMMON_OPS} -v "`pwd`/etc/qa/zzz_disable_otel_attr_hooks.ini:/usr/local/etc/php/conf.d/zzz_disable_otel_attr_hooks.ini:ro"
@@ -89,6 +92,8 @@ else
         DOCKER_RUN_WITH_SOCKET:=
         DOCKER_SHELL:=
 		DOCKER_INTERACTIVE_SHELL:=
+        DOCKER_DEFAULT_SECURITY_OPS=
+        DOCKER_WORKSPACE_BIND_OPS=
     endif
 endif
 
@@ -109,6 +114,7 @@ include includes/Renovate.Migrations.mk
 include includes/AI.Migrations.mk
 
 ## Our default jobs
+include includes/Documentation.QA.mk
 include includes/EXTRA.mk
 include includes/OnInstallUpdate.mk
 include includes/PHP.mk
