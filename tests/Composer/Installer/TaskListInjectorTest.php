@@ -17,28 +17,6 @@ final class TaskListInjectorTest extends TestCase
     /** @return iterable<string, array{string, array<string, bool>, list<string>, list<string>}> */
     public static function provideInjectCases(): iterable
     {
-        yield 'builds aggregates and docker flags' => [
-            <<<'MAKEFILE'
-make-list(all)
-task-list(all)
-make-list(on-install-or-update)
-ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)
-alpha: ## all ##*AI*##
-beta: #### dep ##*I*##
-gamma: ## contrib ##*E*##
-delta: ## dos ##*D*##
-zeta: ## locked ##*C*##
-eta: ## low ##*L*##
-theta: ## high ##*H*##
-docker-task: ## docker ##*I*##
-	docker run image
-
-MAKEFILE,
-            SupportedFeatures::DEFAULTS,
-            ['$(MAKE) alpha zeta eta theta docker-task', '$(MAKE) alpha beta docker-task ## Count: 3', 'ALL_HAS_DIRECT_DOCKER_TASKS=TRUE'],
-            [],
-        ];
-
         $features                                        = SupportedFeatures::DEFAULTS;
         $features[SupportedFeatures::FEATURE_CODE_STYLE] = false;
 
@@ -61,36 +39,6 @@ MAKEFILE,
             $features,
             ['$(MAKE) enabled ## Count: 1', '$(MAKE) contrib-task ## Count: 1'],
             ['$(MAKE) gated'],
-        ];
-
-        yield 'K marker injects ci-locked only not all ci-all or ci-dos' => [
-            <<<'MAKEFILE'
-make-list(all)
-task-list(all)
-make-list(ci-locked)
-task-list(ci-locked)
-make-list(ci-dos)
-task-list(ci-dos)
-documentation-markdownlint: ## Lint markdown structure ##*K*##
-unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
-
-MAKEFILE,
-            SupportedFeatures::DEFAULTS,
-            [
-                '@echo "[\"documentation-markdownlint\"]" ## Count: 1',
-                '$(MAKE) documentation-markdownlint ## Count: 1',
-                '$(MAKE) unit-testing-raw ## Count: 1',
-                '@echo "[\"unit-testing-raw\"]" ## Count: 1',
-            ],
-            [
-                'make-list(all)',
-                'task-list(all)',
-                'task-list(ci-locked)',
-                'make-list(ci-locked)',
-                'task-list(ci-dos)',
-                'make-list(ci-dos)',
-                'documentation-markdownlint","unit-testing-raw',
-            ],
         ];
 
         yield 'injects task-list for multiple aggregates independently' => [
@@ -139,12 +87,22 @@ MAKEFILE,
     }
 
     #[Test]
-    public function injectReplacesCiLockedListWithExactOutputForKMarker(): void
+    public function injectExactOutputForAggregatesAndDockerFlags(): void
     {
         $input = <<<'MAKEFILE'
-make-list(ci-locked)
-task-list(ci-locked)
-documentation-markdownlint: ## Lint ##*K*##
+make-list(all)
+task-list(all)
+make-list(on-install-or-update)
+ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)
+alpha: ## all ##*AI*##
+beta: #### dep ##*I*##
+gamma: ## contrib ##*E*##
+delta: ## dos ##*D*##
+zeta: ## locked ##*C*##
+eta: ## low ##*L*##
+theta: ## high ##*H*##
+docker-task: ## docker ##*I*##
+	docker run image
 
 MAKEFILE;
 
@@ -156,9 +114,146 @@ MAKEFILE;
         );
 
         $expected = <<<'MAKEFILE'
-$(MAKE) documentation-markdownlint ## Count: 1
-@echo "[\"documentation-markdownlint\"]" ## Count: 1
+$(MAKE) alpha zeta eta theta docker-task ## Count: 5
+@echo "[\"alpha\",\"zeta\",\"eta\",\"theta\",\"docker-task\"]" ## Count: 5
+$(MAKE) alpha beta docker-task ## Count: 3
+ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
+alpha: ## all ##*AI*##
+beta: #### dep ##*I*##
+gamma: ## contrib ##*E*##
+delta: ## dos ##*D*##
+zeta: ## locked ##*C*##
+eta: ## low ##*L*##
+theta: ## high ##*H*##
+docker-task: ## docker ##*I*##
+	docker run image
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
+    public function injectReplacesCiLockedListWithExactOutputForKMarker(): void
+    {
+        $input = <<<'MAKEFILE'
+make-list(ci-locked)
+task-list(ci-locked)
 documentation-markdownlint: ## Lint ##*K*##
+documentation-links: ## Links ##*K*##
+
+MAKEFILE;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            SupportedFeatures::DEFAULTS,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE) documentation-markdownlint documentation-links ## Count: 2
+@echo "[\"documentation-markdownlint\",\"documentation-links\"]" ## Count: 2
+documentation-markdownlint: ## Lint ##*K*##
+documentation-links: ## Links ##*K*##
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
+    public function injectExactOutputForKMarkerAcrossCiAggregatesAndDirectDockerFlags(): void
+    {
+        $input = <<<'MAKEFILE'
+make-list(all)
+task-list(all)
+make-list(ci-all)
+task-list(ci-all)
+make-list(ci-locked)
+task-list(ci-locked)
+make-list(ci-dos)
+task-list(ci-dos)
+ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(ci-locked, TRUE, FALSE)
+DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag
+IMAGE_MARKDOWNLINT := markdown:tag
+IMAGE_LYCHEE := lychee:tag
+
+documentation-markdownlint: ## Lint ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml
+
+documentation-links: ## Links ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
+unit-testing-raw: ## Run tests ##*D*##
+	php vendor/bin/phpunit
+
+MAKEFILE;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            SupportedFeatures::DEFAULTS,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE)  ## Count: 0
+@echo "[]" ## Count: 0
+$(MAKE)  ## Count: 0
+@echo "[]" ## Count: 0
+$(MAKE) documentation-markdownlint documentation-links ## Count: 2
+@echo "[\"documentation-markdownlint\",\"documentation-links\"]" ## Count: 2
+$(MAKE) unit-testing-raw ## Count: 1
+@echo "[\"unit-testing-raw\"]" ## Count: 1
+ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
+DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag
+IMAGE_MARKDOWNLINT := markdown:tag
+IMAGE_LYCHEE := lychee:tag
+
+documentation-markdownlint: ## Lint ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml
+
+documentation-links: ## Links ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
+unit-testing-raw: ## Run tests ##*D*##
+	php vendor/bin/phpunit
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
+    public function injectExactOutputForHashCountMapOnInstallTargets(): void
+    {
+        $input = <<<'MAKEFILE'
+make-list(all)
+task-list(all)
+make-list(ci-all)
+task-list(ci-all)
+make-list(on-install-or-update)
+task-list(on-install-or-update)
+two-hash-i: ## two ##*I*##
+four-hash-i: #### four ##*I*##
+
+MAKEFILE;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            SupportedFeatures::DEFAULTS,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE) two-hash-i ## Count: 1
+@echo "[\"two-hash-i\"]" ## Count: 1
+$(MAKE)  ## Count: 0
+@echo "[]" ## Count: 0
+$(MAKE) two-hash-i four-hash-i ## Count: 2
+@echo "[\"two-hash-i\",\"four-hash-i\"]" ## Count: 2
+two-hash-i: ## two ##*I*##
+four-hash-i: #### four ##*I*##
 
 MAKEFILE;
 

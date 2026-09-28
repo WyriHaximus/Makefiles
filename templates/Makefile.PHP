@@ -97,6 +97,8 @@ else
     endif
 endif
 
+DOCKER_RUN_DOCUMENTATION=docker run --rm -i $(DOCKER_DEFAULT_SECURITY_OPS) $(DOCKER_WORKSPACE_BIND_OPS)
+
 ## Run everything extra points
 include includes/All.mk
 
