@@ -104,6 +104,16 @@ final class InstallerTest extends TestCase
         Installer::findEventListeners(ComposerFixture::event($vendorDir));
 
         self::assertFileExists($root . 'Makefile');
+        $makefile = file_get_contents($root . 'Makefile');
+        self::assertIsString($makefile);
+        self::assertStringContainsString('documentation-markdownlint:', $makefile);
+        self::assertStringNotContainsString('documentation-qa:', $makefile);
+        self::assertStringContainsString('documentation-markdownlint:', $makefile);
+        self::assertStringContainsString('@echo "[\"unit-testing-raw\"]" ## Count: 1', $makefile);
+        self::assertStringContainsString(
+            '@echo "[\"documentation-markdownlint\",\"composer-validate\",\"cs\",\"stan\",\"mutation-testing\",\"composer-require-checker\",\"composer-unused\",\"backward-compatibility-check\"]" ## Count: 8',
+            $makefile,
+        );
     }
 
     #[Test]

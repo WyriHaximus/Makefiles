@@ -26,13 +26,14 @@ final class TaskListInjector
 
     public static function inject(MakefileGenerationContext $context, string $makefileContents): string
     {
-        $hashCountMap   = [
+        $hashCountMap = [
             2 => [
                 'all',
                 'on-install-or-update',
             ],
             4 => ['on-install-or-update'],
         ];
+        // K: CI once on locked deps (ci-locked only), not ci-all or ci-dos.
         $typesToTaskMap = [
             'A' => [
                 'all',
@@ -40,6 +41,7 @@ final class TaskListInjector
             ],
             'E' => ['contrib'],
             'D' => ['ci-dos'],
+            'K' => ['ci-locked'],
             'I' => [
                 'all',
                 'ci-all',
@@ -73,7 +75,7 @@ final class TaskListInjector
         ];
 
         preg_match_all(
-            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,_\`\/\-\\\\]+\s+)+)##\*([AEDILCH]+)\*(##\^([a-z-|]+)\^##)?/',
+            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,_\`\/\-\\\\]+\s+)+)##\*([AEDILCHK]+)\*(##\^([a-z-|]+)\^##)?/',
             $makefileContents,
             $matches,
             PREG_OFFSET_CAPTURE,

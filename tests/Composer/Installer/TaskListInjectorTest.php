@@ -62,6 +62,107 @@ MAKEFILE,
             ['$(MAKE) enabled ## Count: 1', '$(MAKE) contrib-task ## Count: 1'],
             ['$(MAKE) gated'],
         ];
+
+        yield 'K marker injects ci-locked only not all ci-all or ci-dos' => [
+            <<<'MAKEFILE'
+make-list(all)
+task-list(all)
+make-list(ci-locked)
+task-list(ci-locked)
+make-list(ci-dos)
+task-list(ci-dos)
+documentation-markdownlint: ## Lint markdown structure ##*K*##
+unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
+
+MAKEFILE,
+            SupportedFeatures::DEFAULTS,
+            [
+                '@echo "[\"documentation-markdownlint\"]" ## Count: 1',
+                '$(MAKE) documentation-markdownlint ## Count: 1',
+                '$(MAKE) unit-testing-raw ## Count: 1',
+                '@echo "[\"unit-testing-raw\"]" ## Count: 1',
+            ],
+            [
+                'make-list(all)',
+                'task-list(all)',
+                'task-list(ci-locked)',
+                'make-list(ci-locked)',
+                'task-list(ci-dos)',
+                'make-list(ci-dos)',
+                'documentation-markdownlint","unit-testing-raw',
+            ],
+        ];
+
+        yield 'injects task-list for multiple aggregates independently' => [
+            <<<'MAKEFILE'
+make-list(ci-dos)
+task-list(ci-dos)
+make-list(ci-low)
+task-list(ci-low)
+only-dos: ## dos ##*D*##
+only-low: ## low only ##*L*##
+
+MAKEFILE,
+            SupportedFeatures::DEFAULTS,
+            [
+                '@echo "[\"only-dos\"]" ## Count: 1',
+                '@echo "[\"only-low\"]" ## Count: 1',
+                '$(MAKE) only-dos ## Count: 1',
+                '$(MAKE) only-low ## Count: 1',
+            ],
+            [
+                'task-list(ci-dos)',
+                'task-list(ci-low)',
+            ],
+        ];
+
+        $featuresWithoutUnitTests                                        = SupportedFeatures::DEFAULTS;
+        $featuresWithoutUnitTests[SupportedFeatures::FEATURE_UNIT_TESTS] = false;
+
+        yield 'ci-dos skips unit-tests when feature disabled' => [
+            <<<'MAKEFILE'
+make-list(ci-dos)
+task-list(ci-dos)
+unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
+
+MAKEFILE,
+            $featuresWithoutUnitTests,
+            [
+                '@echo "[]" ## Count: 0',
+                '$(MAKE)  ## Count: 0',
+            ],
+            [
+                '\"unit-testing-raw\"',
+                'task-list(ci-dos)',
+            ],
+        ];
+    }
+
+    #[Test]
+    public function injectReplacesCiLockedListWithExactOutputForKMarker(): void
+    {
+        $input = <<<'MAKEFILE'
+make-list(ci-locked)
+task-list(ci-locked)
+documentation-markdownlint: ## Lint ##*K*##
+
+MAKEFILE;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            SupportedFeatures::DEFAULTS,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE) documentation-markdownlint ## Count: 1
+@echo "[\"documentation-markdownlint\"]" ## Count: 1
+documentation-markdownlint: ## Lint ##*K*##
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
     }
 
     /**
