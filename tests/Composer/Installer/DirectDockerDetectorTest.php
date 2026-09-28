@@ -41,9 +41,15 @@ final class DirectDockerDetectorTest extends TestCase
             true,
         ];
 
-        yield 'documentation markdownlint docker wrapper variable' => [
-            "DOCKER_RUN_MARKDOWNLINT=docker run --rm -i image:tag\n\ndocumentation-markdownlint: ## lint ##*K*##\n\t\$(DOCKER_RUN_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml\n",
+        yield 'documentation markdownlint shared docker wrapper and image' => [
+            "DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag\nIMAGE_MARKDOWNLINT := markdown:tag\n\ndocumentation-markdownlint: ## lint ##*K*##\n\t\$(DOCKER_RUN_DOCUMENTATION) \$(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml\n",
             'documentation-markdownlint',
+            true,
+        ];
+
+        yield 'documentation links shared docker wrapper and image' => [
+            "DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag\nIMAGE_LYCHEE := lychee:tag\n\ndocumentation-links: ## links ##*K*##\n\t\$(DOCKER_RUN_DOCUMENTATION) \$(IMAGE_LYCHEE) --config etc/qa/lychee.toml .\n",
+            'documentation-links',
             true,
         ];
 
@@ -185,6 +191,24 @@ MAKEFILE,
             ['all' => []],
             '',
             true,
+        ];
+
+        yield 'ci-locked aggregate with documentation docker wrappers' => [
+            <<<'MAKEFILE'
+ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(ci-locked, TRUE, FALSE)
+DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag
+IMAGE_MARKDOWNLINT := markdown:tag
+IMAGE_LYCHEE := lychee:tag
+
+documentation-markdownlint: ## Lint ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml
+
+documentation-links: ## Links ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
+MAKEFILE,
+            ['ci-locked' => ['documentation-markdownlint', 'documentation-links']],
+            'ALL_HAS_DIRECT_DOCKER_TASKS=TRUE',
+            false,
         ];
     }
 
