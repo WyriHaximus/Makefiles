@@ -108,10 +108,12 @@ final class InstallerTest extends TestCase
         self::assertIsString($makefile);
         self::assertStringContainsString('documentation-markdownlint:', $makefile);
         self::assertStringContainsString('documentation-links:', $makefile);
+        self::assertStringContainsString('documentation-typos:', $makefile);
         self::assertStringNotContainsString('documentation-qa:', $makefile);
+        self::assertStringContainsString('DOCKER_RUN_DOCUMENTATION=docker run', $makefile);
         self::assertStringContainsString('@echo "[\"unit-testing-raw\"]" ## Count: 1', $makefile);
         self::assertStringContainsString(
-            '@echo "[\"documentation-markdownlint\",\"documentation-links\",\"composer-validate\",\"cs\",\"stan\",\"mutation-testing\",\"composer-require-checker\",\"composer-unused\",\"backward-compatibility-check\"]" ## Count: 9',
+            '@echo "[\"composer-validate\",\"cs\",\"stan\",\"mutation-testing\",\"composer-require-checker\",\"composer-unused\",\"backward-compatibility-check\",\"documentation-markdownlint\",\"documentation-links\",\"documentation-typos\"]" ## Count: 10',
             $makefile,
         );
     }

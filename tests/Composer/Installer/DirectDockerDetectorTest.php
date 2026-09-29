@@ -53,6 +53,12 @@ final class DirectDockerDetectorTest extends TestCase
             true,
         ];
 
+        yield 'documentation typos shared docker wrapper and image' => [
+            "DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag\nIMAGE_CSPELL := cspell:tag\n\ndocumentation-typos: ## typos ##*K*##\n\t\$(DOCKER_RUN_DOCUMENTATION) \$(IMAGE_CSPELL) --config etc/qa/cspell.json .\n",
+            'documentation-typos',
+            true,
+        ];
+
         yield 'framework docker run variable is ignored' => [
             "DOCKER_RUN:=docker run --rm ghcr.io/example/php:8.4-dev\n\ncomposer-normalize: ## normalize ##*I*##\n\t\$(DOCKER_RUN) composer normalize\n",
             'composer-normalize',
@@ -199,14 +205,18 @@ ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(ci-locked, TR
 DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag
 IMAGE_MARKDOWNLINT := markdown:tag
 IMAGE_LYCHEE := lychee:tag
+IMAGE_CSPELL := cspell:tag
 
 documentation-markdownlint: ## Lint ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml
 
 documentation-links: ## Links ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
+
+documentation-typos: ## Typos ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json .
 MAKEFILE,
-            ['ci-locked' => ['documentation-markdownlint', 'documentation-links']],
+            ['ci-locked' => ['documentation-markdownlint', 'documentation-links', 'documentation-typos']],
             'ALL_HAS_DIRECT_DOCKER_TASKS=TRUE',
             false,
         ];

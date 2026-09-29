@@ -141,6 +141,7 @@ make-list(ci-locked)
 task-list(ci-locked)
 documentation-markdownlint: ## Lint ##*K*##
 documentation-links: ## Links ##*K*##
+documentation-typos: ## Typos ##*K*##
 
 MAKEFILE;
 
@@ -152,10 +153,11 @@ MAKEFILE;
         );
 
         $expected = <<<'MAKEFILE'
-$(MAKE) documentation-markdownlint documentation-links ## Count: 2
-@echo "[\"documentation-markdownlint\",\"documentation-links\"]" ## Count: 2
+$(MAKE) documentation-markdownlint documentation-links documentation-typos ## Count: 3
+@echo "[\"documentation-markdownlint\",\"documentation-links\",\"documentation-typos\"]" ## Count: 3
 documentation-markdownlint: ## Lint ##*K*##
 documentation-links: ## Links ##*K*##
+documentation-typos: ## Typos ##*K*##
 
 MAKEFILE;
 
@@ -178,12 +180,16 @@ ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(ci-locked, TR
 DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag
 IMAGE_MARKDOWNLINT := markdown:tag
 IMAGE_LYCHEE := lychee:tag
+IMAGE_CSPELL := cspell:tag
 
 documentation-markdownlint: ## Lint ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml
 
 documentation-links: ## Links ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
+
+documentation-typos: ## Typos ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json .
 unit-testing-raw: ## Run tests ##*D*##
 	php vendor/bin/phpunit
 
@@ -201,22 +207,58 @@ $(MAKE)  ## Count: 0
 @echo "[]" ## Count: 0
 $(MAKE)  ## Count: 0
 @echo "[]" ## Count: 0
-$(MAKE) documentation-markdownlint documentation-links ## Count: 2
-@echo "[\"documentation-markdownlint\",\"documentation-links\"]" ## Count: 2
+$(MAKE) documentation-markdownlint documentation-links documentation-typos ## Count: 3
+@echo "[\"documentation-markdownlint\",\"documentation-links\",\"documentation-typos\"]" ## Count: 3
 $(MAKE) unit-testing-raw ## Count: 1
 @echo "[\"unit-testing-raw\"]" ## Count: 1
 ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
 DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag
 IMAGE_MARKDOWNLINT := markdown:tag
 IMAGE_LYCHEE := lychee:tag
+IMAGE_CSPELL := cspell:tag
 
 documentation-markdownlint: ## Lint ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml
 
 documentation-links: ## Links ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
+
+documentation-typos: ## Typos ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json .
 unit-testing-raw: ## Run tests ##*D*##
 	php vendor/bin/phpunit
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
+    public function injectExactOutputForFeatureGateWhenFeatureDisabled(): void
+    {
+        $input = <<<'MAKEFILE'
+make-list(all)
+task-list(all)
+gated: ## cs ##*A*##^code-style^##
+enabled: ## ok ##*A*##
+
+MAKEFILE;
+
+        $features                                        = SupportedFeatures::DEFAULTS;
+        $features[SupportedFeatures::FEATURE_CODE_STYLE] = false;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            $features,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE) enabled ## Count: 1
+@echo "[\"enabled\"]" ## Count: 1
+gated: ## cs ##*A*##^code-style^##
+enabled: ## ok ##*A*##
 
 MAKEFILE;
 

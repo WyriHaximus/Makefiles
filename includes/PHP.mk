@@ -27,7 +27,7 @@ stan: ## Run static analysis (PHPStan) ##*LCH*##^static-analysis^##
 
 unit-testing: ## Run tests ##*AE*##^unit-tests^##
 	service_start(before-unit-tests-service)
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+	$(DOCKER_RUN_WITH_SOCKET) bash -ec 'rm -rf var/phpunit/cache && vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml'
 	$(MAKE) coverage-guard
 	service_cleanup(after-unit-tests-service)
 
@@ -37,7 +37,7 @@ unit-testing-filter: ## Run tests with specified filter ####^unit-tests^##
 	service_cleanup(after-unit-tests-service)
 
 unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
-	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+	bash -ec 'rm -rf var/phpunit/cache && php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml'
 	$(MAKE) coverage-guard-raw
 
 coverage-guard: ## Enforce code coverage rules ####
@@ -48,11 +48,11 @@ coverage-guard-raw: ## Enforce code coverage rules ####
 
 mutation-testing: ## Run mutation testing ##*LCH*##^static-analysis|unit-tests^##
 	service_start(before-unit-tests-service)
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(MUTATION_THREADS)
+	$(DOCKER_RUN_WITH_SOCKET) bash -ec 'rm -rf /tmp/phpstan var/phpunit/cache && vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(MUTATION_THREADS)'
 	service_cleanup(after-unit-tests-service)
 
 mutation-testing-raw: ## Run mutation testing ####^static-analysis|unit-tests^##
-	vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(MUTATION_THREADS)
+	bash -ec 'rm -rf /tmp/phpstan var/phpunit/cache && vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" --threads=$(MUTATION_THREADS)'
 
 composer-require-checker: ## Ensure we require every package used in this package directly ##*EC*##^composer-dependency-checkers^##
 	$(DOCKER_SHELL) vendor/bin/composer-require-checker --ignore-parse-errors --ansi -vvv --config-file=./etc/qa/composer-require-checker.json

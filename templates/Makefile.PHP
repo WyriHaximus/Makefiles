@@ -116,10 +116,10 @@ include includes/Renovate.Migrations.mk
 include includes/AI.Migrations.mk
 
 ## Our default jobs
-include includes/Documentation.QA.mk
 include includes/EXTRA.mk
 include includes/OnInstallUpdate.mk
 include includes/PHP.mk
+include includes/Documentation.QA.mk
 include includes/ContainerAccess.mk
 include includes/Help.mk
 include includes/TaskFinders.mk
