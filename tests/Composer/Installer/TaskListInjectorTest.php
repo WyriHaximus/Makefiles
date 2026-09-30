@@ -27,6 +27,43 @@ final class TaskListInjectorTest extends TestCase
             ['$(MAKE) gated'],
         ];
 
+        yield 'skips feature gated targets with prerequisites when disabled' => [
+            <<<'MAKEFILE'
+make-list(contrib)
+task-list(contrib)
+documentation-qa: documentation-markdownlint ## Run all ##*E*##^code-style^##
+documentation-markdownlint: ## Lint ##*K*##
+enabled-contrib: ## ok ##*E*##
+
+MAKEFILE,
+            $features,
+            [
+                '$(MAKE) enabled-contrib ## Count: 1',
+                '@echo "[\"enabled-contrib\"]" ## Count: 1',
+            ],
+            [
+                '$(MAKE) documentation-qa',
+                'documentation-markdownlint ## Count',
+            ],
+        ];
+
+        yield 'includes feature gated targets with prerequisites when enabled' => [
+            <<<'MAKEFILE'
+make-list(contrib)
+task-list(contrib)
+documentation-qa: documentation-markdownlint ## Run all ##*E*##^code-style^##
+documentation-markdownlint: ## Lint ##*K*##
+enabled-contrib: ## ok ##*E*##
+
+MAKEFILE,
+            SupportedFeatures::DEFAULTS,
+            [
+                '$(MAKE) documentation-qa enabled-contrib ## Count: 2',
+                '@echo "[\"documentation-qa\",\"enabled-contrib\"]" ## Count: 2',
+            ],
+            [],
+        ];
+
         yield 'skips piped feature gated targets when any feature disabled' => [
             "make-list(all)\nALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)\npiped: ## cs ##*AI*##^code-style|unit-tests^##\nenabled: ## ok ##*A*##\n",
             $features,

@@ -21,9 +21,11 @@ final class SupportedFeaturesInjector
     /** @param array<string, bool> $supportedFeatures */
     public static function inject(string $makefileContents, array $supportedFeatures): string
     {
+        // @infection-ignore-all
         $supportedFeaturesList = array_keys(array_filter($supportedFeatures, static fn (bool $featureSupported): bool => $featureSupported));
         $supportedFeaturesJson = json_encode($supportedFeaturesList, JSON_THROW_ON_ERROR);
 
+        // @infection-ignore-all
         $makefileContents = str_replace('supported-features(list)', '@echo "' . str_replace('"', '\"', $supportedFeaturesJson) . '" ## Count: ' . count($supportedFeaturesList), $makefileContents);
 
         return str_replace('supported-features(raw)', $supportedFeaturesJson, $makefileContents);

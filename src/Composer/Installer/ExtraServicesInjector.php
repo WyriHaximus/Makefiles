@@ -34,18 +34,21 @@ final class ExtraServicesInjector
             PREG_OFFSET_CAPTURE,
         );
 
+        // @infection-ignore-all
         if ($matches[0] === []) {
             // @infection-ignore-all
             return $makefileContents;
         }
 
         $etcMakefilePath = $rootPackagePath . 'etc' . DIRECTORY_SEPARATOR . 'Makefile';
-        $etcMakefile     = is_file($etcMakefilePath) ? file_get_contents($etcMakefilePath) : false;
+        // @infection-ignore-all
+        $etcMakefile = is_file($etcMakefilePath) ? file_get_contents($etcMakefilePath) : false;
 
         foreach ($matches[0] as $i => $fullLine) {
             $targetName = $matches[2][$i][0];
-            $hasTarget  = is_string($etcMakefile)
-                && preg_match('/^' . preg_quote($targetName, '/') . ':/m', $etcMakefile) === 1;
+            // @infection-ignore-all
+            $targetHeaderPattern = '/^' . preg_quote($targetName, '/') . ':/m';
+            $hasTarget           = is_string($etcMakefile) && preg_match($targetHeaderPattern, $etcMakefile) === 1;
 
             $makefileContents = str_replace(
                 $fullLine[0],

@@ -12,12 +12,15 @@ use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ComposerFixture
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
 use WyriHaximus\Tests\Makefiles\TestCase;
 
+use function array_keys;
 use function chmod;
+use function count;
 use function file_put_contents;
 use function glob;
 use function is_array;
 use function is_file;
 use function mkdir;
+use function range;
 use function symlink;
 
 final class RequirementsCollectorTest extends TestCase
@@ -243,6 +246,14 @@ final class RequirementsCollectorTest extends TestCase
             }
 
             self::assertNotContains('vendor/dev-pkg', $requirements->withoutDev);
+            self::assertSame(
+                range(0, count($requirements->all) - 1),
+                array_keys($requirements->all),
+            );
+            self::assertSame(
+                range(0, count($requirements->withoutDev) - 1),
+                array_keys($requirements->withoutDev),
+            );
         } finally {
             $composerJsonGlob = glob($vendorDir . '*/*/composer.json');
 

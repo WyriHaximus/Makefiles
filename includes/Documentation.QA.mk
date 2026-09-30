@@ -10,7 +10,7 @@ documentation-links: ## Check documentation links ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
 
 documentation-typos: ## Check documentation spelling ##*K*##
-	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json --no-progress --no-must-find-files $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.idea/*")
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json --no-progress --no-must-find-files $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.idea/*" -not -path "./etc/qa/vale/*")
 
 documentation-vale-sync: #### Download Vale style packages ####
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) sync --config etc/qa/vale.ini
@@ -18,3 +18,5 @@ documentation-vale-sync: #### Download Vale style packages ####
 documentation-vale: ## Lint documentation prose (Vale) ##*K*##
 	@test -d etc/qa/vale/styles/write-good || $(MAKE) documentation-vale-sync
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini --no-global README.md AGENTS.md CONTRIBUTING.md $$(find etc/ai -name '*.md' 2>/dev/null)
+
+documentation-qa: documentation-markdownlint documentation-links documentation-typos documentation-vale ## Run all documentation QA checks ##*E*##

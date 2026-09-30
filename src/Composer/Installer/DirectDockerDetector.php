@@ -13,6 +13,7 @@ use function array_map;
 use function explode;
 use function implode;
 use function in_array;
+use function is_int;
 use function ltrim;
 use function preg_match;
 use function preg_match_all;
@@ -22,7 +23,9 @@ use function str_contains;
 use function str_replace;
 use function str_starts_with;
 use function strlen;
+use function strpos;
 use function substr;
+use function trim;
 
 use const PREG_OFFSET_CAPTURE;
 
@@ -129,19 +132,56 @@ final class DirectDockerDetector
             return true;
         }
 
-        if (preg_match_all('/\$\(MAKE\)\s+([a-zA-Z0-9_-]+)/', $recipe, $subTargets) === 0) {
-            return false;
+        $makeSubTargetMatches = preg_match_all('/\$\(MAKE\)\s+([a-zA-Z0-9_-]+)/', $recipe, $subTargets);
+        if (is_int($makeSubTargetMatches) && $makeSubTargetMatches > 0) {
+            return array_any(
+                $subTargets[1],
+                static fn (string $subTarget): bool => self::targetCallsDockerDirectly(
+                    $makefileContents,
+                    $subTarget,
+                    $visited,
+                    $dockerWrapperVariables,
+                ),
+            );
         }
 
+        $prerequisites = self::extractTargetPrerequisites($makefileContents, $target);
+
         return array_any(
-            $subTargets[1],
-            static fn (string $subTarget): bool => self::targetCallsDockerDirectly(
+            $prerequisites,
+            static fn (string $prerequisite): bool => self::targetCallsDockerDirectly(
                 $makefileContents,
-                $subTarget,
+                $prerequisite,
                 $visited,
                 $dockerWrapperVariables,
             ),
         );
+    }
+
+    /** @return list<string> */
+    private static function extractTargetPrerequisites(string $makefileContents, string $target): array
+    {
+        if (preg_match('/^' . preg_quote($target, '/') . ':([^\n]+)/m', $makefileContents, $match) !== 1) {
+            return [];
+        }
+
+        $dependencyLine = $match[1];
+        $commentStart   = strpos($dependencyLine, '##');
+        if ($commentStart !== false) {
+            $dependencyLine = substr($dependencyLine, 0, $commentStart);
+        }
+
+        $prerequisites = [];
+        // @infection-ignore-all
+        foreach (explode(' ', trim($dependencyLine)) as $part) {
+            if ($part === '' || $part === '|') {
+                continue;
+            }
+
+            $prerequisites[] = $part;
+        }
+
+        return $prerequisites;
     }
 
     /** @return array<string, true> */
@@ -181,12 +221,18 @@ final class DirectDockerDetector
 
     private static function extractTargetRecipe(string $makefileContents, string $target): string|null
     {
-        if (preg_match('/^' . preg_quote($target, '/') . ':[^\n]*\n/m', $makefileContents, $match, PREG_OFFSET_CAPTURE) !== 1) {
+        if (preg_match('/^' . preg_quote($target, '/') . ':[^\n]*/m', $makefileContents, $match, PREG_OFFSET_CAPTURE) !== 1) {
             return null;
         }
 
         $offset = $match[0][1] + strlen($match[0][0]);
-        $rest   = substr($makefileContents, $offset);
+        // @infection-ignore-all
+        if ($offset < strlen($makefileContents) && $makefileContents[$offset] === "\n") {
+            // @infection-ignore-all
+            ++$offset;
+        }
+
+        $rest = substr($makefileContents, $offset);
 
         if ($rest === '') {
             // @infection-ignore-all

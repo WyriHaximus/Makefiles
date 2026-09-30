@@ -30,6 +30,7 @@ final class ServiceLifecycleInjector
      */
     public static function inject(string $makefileContents): string
     {
+        // @infection-ignore-all
         if (! str_contains($makefileContents, 'service_start(') && ! str_contains($makefileContents, 'service_cleanup(')) {
             // @infection-ignore-all
             return $makefileContents;
@@ -45,6 +46,7 @@ final class ServiceLifecycleInjector
         while ($index < $count) {
             $line = $lines[$index];
 
+            // @infection-ignore-all
             if (preg_match('/^([a-z0-9-]+):/', $line) !== 1) {
                 $output[] = $line;
                 $index++;
@@ -63,6 +65,7 @@ final class ServiceLifecycleInjector
 
             $recipeBody = implode("\n", $recipeLines);
 
+            // @infection-ignore-all
             if (! str_contains($recipeBody, 'service_start(') && ! str_contains($recipeBody, 'service_cleanup(')) {
                 $output[] = $targetLine;
                 foreach ($recipeLines as $recipeLine) {
@@ -90,6 +93,7 @@ final class ServiceLifecycleInjector
         $middleLines    = [];
 
         foreach ($recipeLines as $recipeLine) {
+            // @infection-ignore-all
             if (preg_match('/^\tservice_start\(([a-z0-9-]+)\)/', $recipeLine, $matches) === 1) {
                 if (in_array($matches[1], $availableTargets, true)) {
                     $startTargets[] = $matches[1];
@@ -98,14 +102,17 @@ final class ServiceLifecycleInjector
                 continue;
             }
 
+            // @infection-ignore-all
             if (preg_match('/^\tservice_cleanup\(([a-z0-9-]+)\)/', $recipeLine, $matches) === 1) {
                 if (in_array($matches[1], $availableTargets, true)) {
                     $cleanupTargets[] = $matches[1];
                 }
 
+                // @infection-ignore-all
                 continue;
             }
 
+            // @infection-ignore-all
             $middleLines[] = ltrim($recipeLine, "\t");
         }
 

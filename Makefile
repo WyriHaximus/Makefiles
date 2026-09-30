@@ -17,7 +17,7 @@ OTEL_PHP_FIBERS_ENABLED?=true
 NEEDS_DOCKER_SOCKET=FALSE
 HAS_EXTRA_SERVICES=FALSE
 ALL_HAS_DIRECT_DOCKER_TASKS=FALSE
-CONTRIB_HAS_DIRECT_DOCKER_TASKS=FALSE
+CONTRIB_HAS_DIRECT_DOCKER_TASKS=TRUE
 ON_INSTALL_OR_UPDATE_HAS_DIRECT_DOCKER_TASKS=FALSE
 PHP_VERSION="8.4"
 CONTAINER_NAME=$(shell echo "${CONTAINER_REGISTRY_REPO}:${PHP_VERSION}-${NTS_OR_ZTS_DOCKER_IMAGE}-alpine${SLIM_DOCKER_IMAGE}-dev")
@@ -118,7 +118,7 @@ else
 	$(DOCKER_RUN_WITH_SOCKET) make contrib-raw
 endif
 contrib-raw: ## The real runs everything, but due to sponge it has to be ran inside DOCKER_RUN ##U##
-	$(MAKE) cs-fix cs unit-testing composer-require-checker composer-unused ## Count: 5
+	$(MAKE) cs-fix cs unit-testing composer-require-checker composer-unused documentation-qa ## Count: 6
 
 
 ## Temporary set of migrations to get all my repos in shape
@@ -592,7 +592,7 @@ documentation-links: ## Check documentation links ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
 
 documentation-typos: ## Check documentation spelling ##*K*##
-	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json --no-progress --no-must-find-files $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.idea/*")
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json --no-progress --no-must-find-files $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.idea/*" -not -path "./etc/qa/vale/*")
 
 documentation-vale-sync: #### Download Vale style packages ####
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) sync --config etc/qa/vale.ini
@@ -600,6 +600,8 @@ documentation-vale-sync: #### Download Vale style packages ####
 documentation-vale: ## Lint documentation prose (Vale) ##*K*##
 	@test -d etc/qa/vale/styles/write-good || $(MAKE) documentation-vale-sync
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini --no-global README.md AGENTS.md CONTRIBUTING.md $$(find etc/ai -name '*.md' 2>/dev/null)
+
+documentation-qa: documentation-markdownlint documentation-links documentation-typos documentation-vale ## Run all documentation QA checks ##*E*##
 
 shell: ## Provides Shell access in the expected environment ####
 	$(DOCKER_INTERACTIVE_SHELL) bash
@@ -636,6 +638,7 @@ help: ## Show this help ####
 	@printf "  \033[32m%-32s\033[0m %s\n" 'cs-fix-debug' 'Fix any automatically fixable code style issues, but with debugging output'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'documentation-links' 'Check documentation links'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'documentation-markdownlint' 'Lint markdown structure'
+	@printf "  \033[32m%-32s\033[0m %s\n" 'documentation-qa' 'Run all documentation QA checks'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'documentation-typos' 'Check documentation spelling'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'documentation-vale' 'Lint documentation prose (Vale)'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'documentation-vale-sync' 'Download Vale style packages'
@@ -806,6 +809,7 @@ help-contrib: ## Show the migrations help ####
 	@printf "  \033[32m%-32s\033[0m %s\n" 'composer-unused' 'Ensure we don'\''t require any package we don'\''t use in this package directly'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'cs' 'Check the code for code style issues'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'cs-fix' 'Fix any automatically fixable code style issues'
+	@printf "  \033[32m%-32s\033[0m %s\n" 'documentation-qa' 'Run all documentation QA checks'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'unit-testing' 'Run tests'
 
 task-list-ci:
