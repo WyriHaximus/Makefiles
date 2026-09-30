@@ -50,6 +50,19 @@
                 "uses: WyriHaximus/github-workflows/.github/workflows/(?<workflowFile>[a-z0-9-]+)\\.yaml@(?<currentDigest>[a-f0-9]{40}) # (?<currentValue>v\\d+\\.\\d+\\.\\d+)"
             ],
             "autoReplaceStringTemplate": "uses: WyriHaximus/github-workflows/.github/workflows/{{workflowFile}}.yaml@{{{newDigest}}} # {{{newValue}}}"
+        },
+        {
+            "customType": "regex",
+            "description": "Vale style package ZIP URLs in etc/base64/vale.ini (consumers receive updates via migration enforce)",
+            "managerFilePatterns": [
+                "/etc/base64/vale\\.ini/"
+            ],
+            "depNameTemplate": "{{depName}}",
+            "datasourceTemplate": "github-releases",
+            "versioningTemplate": "semver-coerced",
+            "matchStrings": [
+                "https://github\\.com/(?<depName>[^/]+/[^/]+)/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
+            ]
         }
     ],
     "packageRules": [
@@ -62,6 +75,16 @@
             ],
             "matchPackageNames": [
                 "WyriHaximus/github-workflows"
+            ]
+        },
+        {
+            "description": "Single Makefiles PR for all Vale style package bumps in etc/base64/vale.ini",
+            "groupName": "vale-ini-style-packages",
+            "matchManagers": [
+                "custom.regex"
+            ],
+            "matchFileNames": [
+                "etc/base64/vale.ini"
             ]
         }
     ]

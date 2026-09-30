@@ -59,6 +59,12 @@ final class DirectDockerDetectorTest extends TestCase
             true,
         ];
 
+        yield 'documentation vale shared docker wrapper and image' => [
+            "DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag\nIMAGE_VALE := vale:tag\n\ndocumentation-vale: ## vale ##*K*##\n\t\$(DOCKER_RUN_DOCUMENTATION) \$(IMAGE_VALE) --config etc/qa/vale.ini .\n",
+            'documentation-vale',
+            true,
+        ];
+
         yield 'framework docker run variable is ignored' => [
             "DOCKER_RUN:=docker run --rm ghcr.io/example/php:8.4-dev\n\ncomposer-normalize: ## normalize ##*I*##\n\t\$(DOCKER_RUN) composer normalize\n",
             'composer-normalize',
@@ -206,6 +212,7 @@ DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag
 IMAGE_MARKDOWNLINT := markdown:tag
 IMAGE_LYCHEE := lychee:tag
 IMAGE_CSPELL := cspell:tag
+IMAGE_VALE := vale:tag
 
 documentation-markdownlint: ## Lint ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml
@@ -215,8 +222,11 @@ documentation-links: ## Links ##*K*##
 
 documentation-typos: ## Typos ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json .
+
+documentation-vale: ## Vale ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini .
 MAKEFILE,
-            ['ci-locked' => ['documentation-markdownlint', 'documentation-links', 'documentation-typos']],
+            ['ci-locked' => ['documentation-markdownlint', 'documentation-links', 'documentation-typos', 'documentation-vale']],
             'ALL_HAS_DIRECT_DOCKER_TASKS=TRUE',
             false,
         ];
