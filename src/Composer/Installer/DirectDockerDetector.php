@@ -172,14 +172,11 @@ final class DirectDockerDetector
     /** @param array<string, true> $dockerWrapperVariables */
     private static function recipeUsesDockerWrapperVariable(string $recipe, array $dockerWrapperVariables): bool
     {
-        if ($dockerWrapperVariables === []) {
-            return false;
-        }
-
         $names = implode('|', array_map(static fn (string $name): string => preg_quote($name, '/'), array_keys($dockerWrapperVariables)));
 
-        return preg_match('/^\t\$\((?:' . $names . ')\)/m', $recipe) === 1
-            || preg_match('/^\t\$\{(?:' . $names . ')\}/m', $recipe) === 1;
+        return $names !== ''
+            && (preg_match('/^\t\$\((?:' . $names . ')\)/m', $recipe) === 1
+                || preg_match('/^\t\$\{(?:' . $names . ')\}/m', $recipe) === 1);
     }
 
     private static function extractTargetRecipe(string $makefileContents, string $target): string|null

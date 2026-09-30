@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
 use function array_key_exists;
+use function array_keys;
 use function count;
 use function explode;
 use function implode;
@@ -81,14 +82,13 @@ final class TaskListInjector
             PREG_OFFSET_CAPTURE,
         );
 
-        $counter = count($matches[0]);
-        for ($i = 0; $i < $counter; $i++) {
+        foreach (array_keys($matches[0]) as $i) {
             foreach ($typesToTaskMap as $type => $taskMap) {
-                foreach ($taskMap as $task) {
-                    if (! str_contains($matches[5][$i][0], $type)) {
-                        continue;
-                    }
+                if (! str_contains($matches[5][$i][0], $type)) {
+                    continue;
+                }
 
+                foreach ($taskMap as $task) {
                     if (in_array($matches[1][$i][0], $tasks[$task], true)) {
                         continue;
                     }
@@ -101,11 +101,11 @@ final class TaskListInjector
                         continue;
                     }
 
-                    if ($matches[7][$i][0] !== '') {
+                    if (($matches[7][$i][0] ?? '') !== '') {
                         foreach (explode('|', $matches[7][$i][0]) as $feature) {
                             if (! array_key_exists($feature, $context->supportedFeatures) || $context->supportedFeatures[$feature] === false) {
                                 // @infection-ignore-all
-                                continue 2;
+                                continue 3;
                             }
                         }
                     }
