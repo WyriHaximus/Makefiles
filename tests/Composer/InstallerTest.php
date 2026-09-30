@@ -109,11 +109,16 @@ final class InstallerTest extends TestCase
         self::assertStringContainsString('documentation-markdownlint:', $makefile);
         self::assertStringContainsString('documentation-links:', $makefile);
         self::assertStringContainsString('documentation-typos:', $makefile);
+        self::assertStringContainsString('documentation-vale:', $makefile);
         self::assertStringNotContainsString('documentation-qa:', $makefile);
         self::assertStringContainsString('DOCKER_RUN_DOCUMENTATION=docker run', $makefile);
         self::assertStringContainsString('@echo "[\"unit-testing-raw\"]" ## Count: 1', $makefile);
         self::assertStringContainsString(
-            '@echo "[\"composer-validate\",\"cs\",\"stan\",\"mutation-testing\",\"composer-require-checker\",\"composer-unused\",\"backward-compatibility-check\",\"documentation-markdownlint\",\"documentation-links\",\"documentation-typos\"]" ## Count: 10',
+            '@echo "[\"composer-validate\",\"cs\",\"stan\",\"mutation-testing\",\"composer-require-checker\",\"composer-unused\",\"backward-compatibility-check\",\"documentation-markdownlint\",\"documentation-links\",\"documentation-typos\",\"documentation-vale\"]" ## Count: 11',
+            $makefile,
+        );
+        self::assertStringContainsString(
+            '$(MAKE) cs-fix cs unit-testing composer-require-checker composer-unused ## Count: 5',
             $makefile,
         );
     }
