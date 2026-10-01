@@ -47,15 +47,12 @@ final class SupportedFeatureConditionalInjector
 
     private static function normalizeValue(string $value): string
     {
-        // @infection-ignore-all
         $value = trim($value);
 
         if ($value === '""') {
-            // @infection-ignore-all
             return '';
         }
 
-        // @infection-ignore-all
         if (strlen($value) >= 2 && $value[0] === '"' && $value[strlen($value) - 1] === '"') {
             return substr($value, 1, -1);
         }

@@ -63,7 +63,6 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         $rootPackagePath = dirname($vendorDir) . DIRECTORY_SEPARATOR;
 
         $composerJsonPath = $rootPackagePath . '/composer.json';
-        // @infection-ignore-all
         if (! is_file($composerJsonPath) || ! is_readable($composerJsonPath)) {
             return;
         }

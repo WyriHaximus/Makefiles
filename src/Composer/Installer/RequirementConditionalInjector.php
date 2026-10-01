@@ -34,8 +34,7 @@ final class RequirementConditionalInjector
 
         foreach ($matchesSecondPass[0] as $i => $fullLine) {
             $requiredPackagesJson = json_decode($matchesSecondPass[3][$i][0], true);
-            // @infection-ignore-all
-            $requiredPackages = is_array($requiredPackagesJson) ? array_values(array_filter($requiredPackagesJson, is_string(...))) : [];
+            $requiredPackages     = is_array($requiredPackagesJson) ? array_values(array_filter($requiredPackagesJson, is_string(...))) : [];
 
             $makefileContents = str_replace(
                 $fullLine[0],

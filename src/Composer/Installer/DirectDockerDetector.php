@@ -84,7 +84,6 @@ final class DirectDockerDetector
         }
 
         foreach (['ALL_HAS_DIRECT_DOCKER_TASKS', 'CONTRIB_HAS_DIRECT_DOCKER_TASKS'] as $flag) {
-            // @infection-ignore-all
             $makefileContents = preg_replace(
                 '/^' . preg_quote($flag, '/') . '=FALSE$/m',
                 $flag . '=TRUE',
@@ -172,7 +171,6 @@ final class DirectDockerDetector
         }
 
         $prerequisites = [];
-        // @infection-ignore-all
         foreach (explode(' ', trim($dependencyLine)) as $part) {
             if ($part === '' || $part === '|') {
                 continue;
@@ -226,16 +224,13 @@ final class DirectDockerDetector
         }
 
         $offset = $match[0][1] + strlen($match[0][0]);
-        // @infection-ignore-all
         if ($offset < strlen($makefileContents) && $makefileContents[$offset] === "\n") {
-            // @infection-ignore-all
             ++$offset;
         }
 
         $rest = substr($makefileContents, $offset);
 
         if ($rest === '') {
-            // @infection-ignore-all
             return '';
         }
 

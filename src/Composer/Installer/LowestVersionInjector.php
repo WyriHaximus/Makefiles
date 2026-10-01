@@ -34,8 +34,7 @@ final class LowestVersionInjector
         );
 
         foreach ($matchesThirdPass[0] as $i => $fullLine) {
-            $filePath = $rootPackagePath . $matchesThirdPass[2][$i][0];
-            // @infection-ignore-all
+            $filePath     = $rootPackagePath . $matchesThirdPass[2][$i][0];
             $fileContents = is_file($filePath) ? file_get_contents($filePath) : false;
             $json         = is_string($fileContents) ? json_decode($fileContents, true) : null;
             $version      = self::cleanVersionToMajorMinor(self::getValueFromTree(
@@ -77,7 +76,6 @@ final class LowestVersionInjector
 
     private static function cleanVersionToMajorMinor(string $version): string
     {
-        // @infection-ignore-all
         $parts = explode('.', $version, 3);
         $major = $parts[0];
         $minor = $parts[1] ?? '0';

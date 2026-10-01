@@ -50,7 +50,6 @@ final class RequirementsCollector
      */
     private static function allRequirements(Composer $composer, string $vendorDir): array
     {
-        // @infection-ignore-all
         return array_values(array_unique([
             ...array_keys($composer->getPackage()->getRequires()),
             ...array_keys($composer->getPackage()->getDevRequires()),
@@ -65,7 +64,6 @@ final class RequirementsCollector
      */
     private static function requirementsWithoutDev(Composer $composer, string $vendorDir): array
     {
-        // @infection-ignore-all
         return array_values(array_unique([
             ...array_keys($composer->getPackage()->getRequires()),
             ...iterator_to_array(self::retrieveRequiredPackagesAndExtensions($vendorDir, false), false),
@@ -91,15 +89,12 @@ final class RequirementsCollector
     private static function retrieveRequiredPackagesAndExtensions(string $vendorDir, bool $includeDev): iterable
     {
         // GlobIterator requires forward slashes; vendor-dir uses backslashes on Windows.
-        // @infection-ignore-all
         $composerJsonGlobPattern = str_replace('\\', '/', rtrim($vendorDir, '/\\')) . '/*/*/composer.json';
 
-        // @infection-ignore-all
         foreach (new GlobIterator($composerJsonGlobPattern, FilesystemIterator::KEY_AS_FILENAME | FilesystemIterator::SKIP_DOTS) as $node) {
             // phpcs:ignore SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable -- GlobIterator yields SplFileInfo
             /** @var SplFileInfo $node */
             $realPath = $node->getRealPath();
-            // @infection-ignore-all
             if ($realPath === false || ! is_file($realPath) || ! is_readable($realPath)) {
                 continue;
             }
@@ -113,7 +108,6 @@ final class RequirementsCollector
             }
 
             if (array_key_exists('require', $json) && is_array($json['require'])) {
-                // @infection-ignore-all
                 foreach (array_filter(array_keys($json['require']), is_string(...)) as $package) {
                     yield $package;
                 }
@@ -124,11 +118,9 @@ final class RequirementsCollector
             }
 
             if (! $includeDev) {
-                // @infection-ignore-all
                 continue;
             }
 
-            // @infection-ignore-all
             foreach (array_filter(array_keys($json['require-dev']), is_string(...)) as $package) {
                 yield $package;
             }

@@ -45,26 +45,21 @@ final class HelpInjector
             $matches,
         );
 
-        // @infection-ignore-all
         foreach ($matches[0] as $i => $fullLine) {
             if (str_contains($fullLine, '##U##')) {
-                // @infection-ignore-all
                 continue;
             }
 
-            $target   = $matches[1][$i];
-            $haspos   = strpos($matches[2][$i], '#');
-            $helpLine = trim(
-                // @infection-ignore-all
+            $target         = $matches[1][$i];
+            $haspos         = strpos($matches[2][$i], '#');
+            $helpLine       = trim(
                 $target . ': ## ' . substr(
                     $matches[2][$i],
                     0,
-                    // @infection-ignore-all
                     $haspos !== false ? $haspos : strlen($matches[2][$i]),
                 ),
             );
-            $isMigration = str_starts_with($target, 'migrations-');
-            // @infection-ignore-all
+            $isMigration    = str_starts_with($target, 'migrations-');
             $hasContribFlag = preg_match('/##\*([AEDILCH]+)\*/', $fullLine, $typeMatch) === 1 && str_contains($typeMatch[1], 'E');
 
             if (! $isMigration) {
@@ -81,7 +76,6 @@ final class HelpInjector
                 ];
             }
 
-            // @infection-ignore-all
             if ($isMigration || ! $hasContribFlag) {
                 continue;
             }
@@ -94,7 +88,6 @@ final class HelpInjector
 
         foreach (['main', 'migrations', 'contrib'] as $helpType) {
             $entries = $helpTargets[$helpType];
-            // @infection-ignore-all
             usort($entries, static fn (array $a, array $b): int => $a[0] <=> $b[0]);
 
             $helpBannerLines = match ($helpType) {
@@ -104,7 +97,6 @@ final class HelpInjector
             };
 
             $makefileContents = str_replace(
-                // @infection-ignore-all
                 'help(' . $helpType . ')',
                 self::formatHelpRecipe($entries, $helpBannerLines),
                 $makefileContents,
@@ -126,7 +118,6 @@ final class HelpInjector
             $lines[] = '@printf "%s\n" ' . self::shellQuote($bannerLine);
         }
 
-        // @infection-ignore-all
         if ($bannerLines !== []) {
             $lines[] = '@printf "\n"';
         }
@@ -146,7 +137,6 @@ final class HelpInjector
 
     private static function shellQuote(string $value): string
     {
-        // @infection-ignore-all
         return "'" . str_replace("'", "'\\''", $value) . "'";
     }
 }

@@ -43,7 +43,6 @@ final class Base64FileInjector
             $base64FileContents['base64(' . basename($file) . ')'] = base64_encode($fileContents);
         }
 
-        // @infection-ignore-all
         return str_replace(array_keys($base64FileContents), array_values($base64FileContents), $makefileContents);
     }
 }
