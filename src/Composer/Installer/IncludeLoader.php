@@ -57,12 +57,14 @@ final class IncludeLoader
     private static function loadInclude(IOInterface $io, string $makefilesPackageRoot, string $filename): string
     {
         $candidatePath = $makefilesPackageRoot . $filename;
-        if (! file_exists($candidatePath)) {
-            return '';
+        if (! self::includeCandidateExists($candidatePath)) {
+            return self::missingIncludeContents();
         }
 
-        $makefileIncludePath = new SplFileInfo($candidatePath)->getRealPath();
-        if ($makefileIncludePath === false || ! is_file($makefileIncludePath) || ! is_readable($makefileIncludePath)) {
+        $resolvedIncludePath = new SplFileInfo($candidatePath)->getRealPath();
+        $makefileIncludePath = is_string($resolvedIncludePath) ? $resolvedIncludePath : '';
+
+        if (! is_file($makefileIncludePath) || ! is_readable($makefileIncludePath)) {
             return '';
         }
 
@@ -82,17 +84,19 @@ final class IncludeLoader
     private static function isRealPathInsideRoot(string $fileRealPath, string $rootRealPath): bool
     {
         $normalizedFilePath = self::normalizePathForComparison($fileRealPath);
-        $normalizedRootPath = rtrim(self::normalizePathForComparison($rootRealPath), '/') . '/';
+        $normalizedRootPath = self::normalizedRootPathWithTrailingSlash($rootRealPath);
 
-        if (
-            (strlen($normalizedFilePath) >= 2 && $normalizedFilePath[1] === ':')
-            || (strlen($normalizedRootPath) >= 2 && $normalizedRootPath[1] === ':')
-        ) {
+        if (self::shouldComparePathsCaseInsensitively($normalizedFilePath, $normalizedRootPath)) {
             $normalizedFilePath = strtolower($normalizedFilePath);
             $normalizedRootPath = strtolower($normalizedRootPath);
         }
 
         return str_starts_with($normalizedFilePath, $normalizedRootPath);
+    }
+
+    private static function pathHasWindowsDriveLetter(string $path): bool
+    {
+        return strlen($path) >= 2 && $path[1] === ':';
     }
 
     private static function normalizePathForComparison(string $path): string
@@ -104,5 +108,25 @@ final class IncludeLoader
         }
 
         return $path;
+    }
+
+    private static function normalizedRootPathWithTrailingSlash(string $rootRealPath): string
+    {
+        return rtrim(self::normalizePathForComparison($rootRealPath), '/') . '/';
+    }
+
+    private static function shouldComparePathsCaseInsensitively(string $normalizedFilePath, string $normalizedRootPath): bool
+    {
+        return self::pathHasWindowsDriveLetter($normalizedFilePath) || self::pathHasWindowsDriveLetter($normalizedRootPath);
+    }
+
+    private static function includeCandidateExists(string $candidatePath): bool
+    {
+        return file_exists($candidatePath);
+    }
+
+    private static function missingIncludeContents(): string
+    {
+        return '';
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
+use function array_all;
 use function array_key_exists;
 use function count;
 use function explode;
@@ -81,34 +82,31 @@ final class TaskListInjector
             PREG_OFFSET_CAPTURE,
         );
 
-        foreach ($matches[0] as $i => $_fullLine) {
+        foreach (self::helpAnnotatedMatchIndices($matches[0]) as $matchIndex) {
             foreach ($typesToTaskMap as $type => $taskMap) {
-                if (! str_contains($matches['types'][$i][0], $type)) {
+                if (! str_contains($matches['types'][$matchIndex][0], $type)) {
                     continue;
                 }
 
                 foreach ($taskMap as $task) {
-                    if (in_array($matches[1][$i][0], $tasks[$task], true)) {
+                    if (in_array($matches[1][$matchIndex][0], $tasks[$task], true)) {
                         continue;
                     }
 
                     if (
                         $type === 'I' &&
-                        array_key_exists(strlen($matches[3][$i][0]), $hashCountMap) &&
-                        ! in_array($task, $hashCountMap[strlen($matches[3][$i][0])], true)
+                        array_key_exists(strlen($matches[3][$matchIndex][0]), $hashCountMap) &&
+                        ! in_array($task, $hashCountMap[strlen($matches[3][$matchIndex][0])], true)
                     ) {
                         continue;
                     }
 
-                    if (($matches['features'][$i][0] ?? '') !== '') {
-                        foreach (explode('|', $matches['features'][$i][0]) as $feature) {
-                            if (! array_key_exists($feature, $context->supportedFeatures) || $context->supportedFeatures[$feature] === false) {
-                                continue 3;
-                            }
-                        }
+                    $featureGate = $matches['features'][$matchIndex][0] ?? '';
+                    if ($featureGate !== '' && ! self::allPipedFeaturesEnabled($featureGate, $context->supportedFeatures)) {
+                        continue;
                     }
 
-                    $tasks[$task][] = $matches[1][$i][0];
+                    $tasks[$task][] = $matches[1][$matchIndex][0];
                 }
             }
         }
@@ -121,5 +119,39 @@ final class TaskListInjector
         }
 
         return DirectDockerDetector::injectFlags($makefileContents, $tasks);
+    }
+
+    private static function matchedLineIsHelpAnnotatedTarget(string $fullLine): bool
+    {
+        return str_contains($fullLine, '##*');
+    }
+
+    /**
+     * @param list<array{0: string, 1: int}> $fullLineMatches
+     *
+     * @return list<int>
+     */
+    private static function helpAnnotatedMatchIndices(array $fullLineMatches): array
+    {
+        $indices = [];
+
+        foreach ($fullLineMatches as $matchIndex => $fullLineMatch) {
+            if (! self::matchedLineIsHelpAnnotatedTarget($fullLineMatch[0])) {
+                continue;
+            }
+
+            $indices[] = $matchIndex;
+        }
+
+        return $indices;
+    }
+
+    /** @param array<string, bool> $supportedFeatures */
+    private static function allPipedFeaturesEnabled(string $pipedFeatures, array $supportedFeatures): bool
+    {
+        return array_all(
+            explode('|', $pipedFeatures),
+            static fn (string $feature): bool => array_key_exists($feature, $supportedFeatures) && $supportedFeatures[$feature] !== false,
+        );
     }
 }

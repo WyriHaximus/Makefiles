@@ -7,9 +7,12 @@ namespace WyriHaximus\Tests\Makefiles\Composer\Installer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
+use ReflectionProperty;
 use RuntimeException;
 use WyriHaximus\Makefiles\Composer\Installer\DirectDockerDetector;
 use WyriHaximus\Tests\Makefiles\TestCase;
+
+use function strlen;
 
 final class DirectDockerDetectorTest extends TestCase
 {
@@ -197,6 +200,38 @@ MAKEFILE,
             true,
         ];
 
+        yield 'prerequisite names are trimmed before lookup' => [
+            <<<'MAKEFILE'
+dep: ## d ##*I*##
+	docker run --rm image cmd
+parent:   dep ## p ##*E*##
+MAKEFILE,
+            'parent',
+            true,
+        ];
+
+        yield 'blank line between target header and recipe' => [
+            "fmt: ## fmt ##*I*##\n\n\tdocker run --rm image fmt\n",
+            'fmt',
+            true,
+        ];
+
+        yield 'prerequisite names are trimmed before dependency lookup' => [
+            <<<'MAKEFILE'
+dep: ####
+	docker run --rm image
+parent: dep   ## p ##*E*##
+MAKEFILE,
+            'parent',
+            true,
+        ];
+
+        yield 'recipe on line immediately after target header newline' => [
+            "fmt: ## x ##*I*##\n\tdocker run --rm image\n",
+            'fmt',
+            true,
+        ];
+
         yield 'recipe after comment lines' => [
             "commented-recipe: ## recipe ##*I*##\n# prepare\n\tdocker run --rm image cmd\n",
             'commented-recipe',
@@ -379,6 +414,51 @@ MAKEFILE,
     }
 
     #[Test]
+    public function extractDockerWrapperVariablesCollectsCustomDockerAssignments(): void
+    {
+        $method   = new ReflectionMethod(DirectDockerDetector::class, 'extractDockerWrapperVariables');
+        $makefile = <<<'MAKEFILE'
+DOCKER_RUN:=docker run --rm ghcr.io/example/php:8.4-dev
+CUSTOM_TOOL=docker run --rm hashicorp/terraform:1.14.8
+NOT_DOCKER=echo hello
+MYTOOL=x docker run image
+
+terraform-fmt: ## fmt ##*I*##
+	$(CUSTOM_TOOL) fmt
+MAKEFILE;
+
+        self::assertSame(['CUSTOM_TOOL' => true], $method->invoke(null, $makefile));
+    }
+
+    #[Test]
+    public function formatTargetRecipeReturnsEmptyStringForNoLines(): void
+    {
+        $method = new ReflectionMethod(DirectDockerDetector::class, 'formatTargetRecipe');
+
+        self::assertSame('', $method->invoke(null, []));
+        self::assertSame("\techo hi\n", $method->invoke(null, ["\techo hi"]));
+    }
+
+    #[Test]
+    public function parseRecipeLinesFromRemainderReturnsEmptyListForEmptyRemainder(): void
+    {
+        $method = new ReflectionMethod(DirectDockerDetector::class, 'parseRecipeLinesFromRemainder');
+        $empty  = new ReflectionProperty(DirectDockerDetector::class, 'emptyRecipeLinesFromMissingRemainder')->getValue();
+        self::assertSame($empty, $method->invoke(null, ''));
+        self::assertSame(["\tdocker run --rm image"], $method->invoke(null, "\tdocker run --rm image\n"));
+    }
+
+    #[Test]
+    public function recipeContentOffsetAfterTargetHeaderSkipsSingleNewline(): void
+    {
+        $method   = new ReflectionMethod(DirectDockerDetector::class, 'recipeContentOffsetAfterTargetHeader');
+        $contents = "fmt: ## x ##\n\tdocker run --rm image\n";
+
+        self::assertSame(strlen("fmt: ## x ##\n"), $method->invoke(null, $contents, strlen('fmt: ## x ##')));
+        self::assertSame(strlen('fmt: ## x ##'), $method->invoke(null, 'fmt: ## x ##', strlen('fmt: ## x ##')));
+    }
+
+    #[Test]
     public function extractTargetRecipeReturnsEmptyStringForHeaderOnlyTarget(): void
     {
         $method = new ReflectionMethod(DirectDockerDetector::class, 'extractTargetRecipe');
@@ -410,6 +490,50 @@ MAKEFILE,
             $method->invoke(null, "myXtarget: evil ## x ##\nmy.target: dep ## x ##\n", 'my.target'),
         );
         self::assertSame(['doc'], $method->invoke(null, "meta: doc   ## x ##\n", 'meta'));
+        self::assertSame(
+            ['dep1', 'dep2'],
+            $method->invoke(null, "parent:   dep1 dep2   ## x ##\n", 'parent'),
+        );
+        self::assertSame(
+            ['dep'],
+            $method->invoke(null, "parent:\t dep ## x ##\n", 'parent'),
+        );
+    }
+
+    #[Test]
+    public function injectExtraServicesDirectDockerFlagsFlipsBothAggregateFlagsWithAssertSame(): void
+    {
+        $input = <<<'MAKEFILE'
+HAS_EXTRA_SERVICES=TRUE
+ALL_HAS_DIRECT_DOCKER_TASKS=FALSE
+CONTRIB_HAS_DIRECT_DOCKER_TASKS=FALSE
+MAKEFILE;
+
+        $expected = <<<'MAKEFILE'
+HAS_EXTRA_SERVICES=TRUE
+ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
+CONTRIB_HAS_DIRECT_DOCKER_TASKS=TRUE
+MAKEFILE;
+
+        self::assertSame($expected, DirectDockerDetector::injectExtraServicesDirectDockerFlags($input));
+    }
+
+    #[Test]
+    public function injectExtraServicesDirectDockerFlagsDoesNotFlipPartialFlagNameMatches(): void
+    {
+        $input = <<<'MAKEFILE'
+HAS_EXTRA_SERVICES=TRUE
+ALL_HAS_DIRECT_DOCKER_TASKS_EXTRA=FALSE
+ALL_HAS_DIRECT_DOCKER_TASKS=FALSE
+MAKEFILE;
+
+        $expected = <<<'MAKEFILE'
+HAS_EXTRA_SERVICES=TRUE
+ALL_HAS_DIRECT_DOCKER_TASKS_EXTRA=FALSE
+ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
+MAKEFILE;
+
+        self::assertSame($expected, DirectDockerDetector::injectExtraServicesDirectDockerFlags($input));
     }
 
     #[Test]
@@ -428,6 +552,22 @@ MAKEFILE,
         self::assertSame(
             '',
             $method->invoke(null, 'parent: child ## p ##', 'parent'),
+        );
+        self::assertSame(
+            '',
+            $method->invoke(null, 'header-only: ## solo ##*I*##', 'header-only'),
+        );
+        self::assertSame(
+            '',
+            $method->invoke(null, "fmt: ## x ##\nnext: ## y ##\n\tdocker run --rm image\n", 'fmt'),
+        );
+        self::assertSame(
+            "\tdocker run --rm image cmd\n",
+            $method->invoke(null, "immediate-recipe: ## x ##\n\tdocker run --rm image cmd\n", 'immediate-recipe'),
+        );
+        self::assertSame(
+            "\techo at eof\n",
+            $method->invoke(null, "eof-recipe: ## x ##\n\techo at eof", 'eof-recipe'),
         );
     }
 

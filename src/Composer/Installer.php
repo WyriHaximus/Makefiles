@@ -12,6 +12,7 @@ use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use WyriHaximus\Makefiles\Composer\Installer\MakefileGenerationContext;
 use WyriHaximus\Makefiles\Composer\Installer\MakefileGenerator;
+use WyriHaximus\Makefiles\Composer\Installer\Requirements;
 use WyriHaximus\Makefiles\Composer\Installer\RequirementsCollector;
 use WyriHaximus\Makefiles\Composer\Installer\SupportedFeaturesResolver;
 
@@ -57,16 +58,30 @@ final class Installer implements PluginInterface, EventSubscriberInterface
      */
     public static function findEventListeners(Event $event): void
     {
-        $composer        = $event->getComposer();
-        $requirements    = RequirementsCollector::collect($composer);
-        $vendorDir       = $composer->getConfig()->get('vendor-dir');
-        $rootPackagePath = dirname($vendorDir) . DIRECTORY_SEPARATOR;
-
-        $composerJsonPath = $rootPackagePath . '/composer.json';
+        $composer         = $event->getComposer();
+        $requirements     = RequirementsCollector::collect($composer);
+        $vendorDir        = $composer->getConfig()->get('vendor-dir');
+        $rootPackagePath  = self::rootPackagePathFromVendorDir($vendorDir);
+        $composerJsonPath = self::composerJsonPathForRootPackage($rootPackagePath);
         if (! is_file($composerJsonPath) || ! is_readable($composerJsonPath)) {
             return;
         }
 
+        self::generateMakefileFromComposerJson(
+            $event,
+            $rootPackagePath,
+            $composerJsonPath,
+            $requirements,
+        );
+    }
+
+    /** @param non-empty-string $composerJsonPath */
+    private static function generateMakefileFromComposerJson(
+        Event $event,
+        string $rootPackagePath,
+        string $composerJsonPath,
+        Requirements $requirements,
+    ): void {
         $jsonRaw = file_get_contents($composerJsonPath);
         assert(is_string($jsonRaw));
 
@@ -101,5 +116,15 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             $requirements,
             $supportedFeatures,
         ));
+    }
+
+    private static function rootPackagePathFromVendorDir(string $vendorDir): string
+    {
+        return dirname($vendorDir) . DIRECTORY_SEPARATOR;
+    }
+
+    private static function composerJsonPathForRootPackage(string $rootPackagePath): string
+    {
+        return $rootPackagePath . 'composer.json';
     }
 }

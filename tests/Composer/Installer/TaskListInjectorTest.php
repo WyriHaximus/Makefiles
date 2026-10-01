@@ -6,6 +6,7 @@ namespace WyriHaximus\Tests\Makefiles\Composer\Installer;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionMethod;
 use WyriHaximus\Makefiles\Composer\Installer\Requirements;
 use WyriHaximus\Makefiles\Composer\Installer\TaskListInjector;
 use WyriHaximus\Makefiles\Composer\SupportedFeatures;
@@ -77,9 +78,12 @@ MAKEFILE,
             ['$(MAKE) enabled ## Count: 1', '$(MAKE) contrib-task ## Count: 1'],
             ['$(MAKE) gated'],
         ];
+    }
 
-        yield 'injects task-list for multiple aggregates independently' => [
-            <<<'MAKEFILE'
+    #[Test]
+    public function injectExactOutputForMultipleCiAggregates(): void
+    {
+        $input = <<<'MAKEFILE'
 make-list(ci-dos)
 task-list(ci-dos)
 make-list(ci-low)
@@ -87,40 +91,56 @@ task-list(ci-low)
 only-dos: ## dos ##*D*##
 only-low: ## low only ##*L*##
 
-MAKEFILE,
+MAKEFILE;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
             SupportedFeatures::DEFAULTS,
-            [
-                '@echo "[\"only-dos\"]" ## Count: 1',
-                '@echo "[\"only-low\"]" ## Count: 1',
-                '$(MAKE) only-dos ## Count: 1',
-                '$(MAKE) only-low ## Count: 1',
-            ],
-            [
-                'task-list(ci-dos)',
-                'task-list(ci-low)',
-            ],
-        ];
+        );
 
-        $featuresWithoutUnitTests                                        = SupportedFeatures::DEFAULTS;
-        $featuresWithoutUnitTests[SupportedFeatures::FEATURE_UNIT_TESTS] = false;
+        $expected = <<<'MAKEFILE'
+$(MAKE) only-dos ## Count: 1
+@echo "[\"only-dos\"]" ## Count: 1
+$(MAKE) only-low ## Count: 1
+@echo "[\"only-low\"]" ## Count: 1
+only-dos: ## dos ##*D*##
+only-low: ## low only ##*L*##
 
-        yield 'ci-dos skips unit-tests when feature disabled' => [
-            <<<'MAKEFILE'
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
+    public function injectExactOutputWhenUnitTestsFeatureDisabledSkipsDosTarget(): void
+    {
+        $input = <<<'MAKEFILE'
 make-list(ci-dos)
 task-list(ci-dos)
 unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
 
-MAKEFILE,
-            $featuresWithoutUnitTests,
-            [
-                '@echo "[]" ## Count: 0',
-                '$(MAKE)  ## Count: 0',
-            ],
-            [
-                '\"unit-testing-raw\"',
-                'task-list(ci-dos)',
-            ],
-        ];
+MAKEFILE;
+
+        $features                                        = SupportedFeatures::DEFAULTS;
+        $features[SupportedFeatures::FEATURE_UNIT_TESTS] = false;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            $features,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE)  ## Count: 0
+@echo "[]" ## Count: 0
+unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
     }
 
     #[Test]
@@ -271,6 +291,67 @@ MAKEFILE;
     }
 
     #[Test]
+    public function injectExactOutputForPipedFeatureGateWhenFirstFeatureDisabled(): void
+    {
+        $input = <<<'MAKEFILE'
+make-list(all)
+task-list(all)
+piped: ## piped ##*A*##^code-style|unit-tests^##
+enabled: ## ok ##*A*##
+
+MAKEFILE;
+
+        $features                                        = SupportedFeatures::DEFAULTS;
+        $features[SupportedFeatures::FEATURE_CODE_STYLE] = false;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            $features,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE) enabled ## Count: 1
+@echo "[\"enabled\"]" ## Count: 1
+piped: ## piped ##*A*##^code-style|unit-tests^##
+enabled: ## ok ##*A*##
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
+    public function injectExactOutputForUnknownFeatureInPipeSkipsTarget(): void
+    {
+        $input = <<<'MAKEFILE'
+make-list(all)
+task-list(all)
+piped: ## piped ##*A*##^not-a-known-feature^##
+enabled: ## ok ##*A*##
+
+MAKEFILE;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            SupportedFeatures::DEFAULTS,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE) enabled ## Count: 1
+@echo "[\"enabled\"]" ## Count: 1
+piped: ## piped ##*A*##^not-a-known-feature^##
+enabled: ## ok ##*A*##
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
     public function injectExactOutputForFeatureGateWhenFeatureDisabled(): void
     {
         $input = <<<'MAKEFILE'
@@ -337,6 +418,38 @@ four-hash-i: #### four ##*I*##
 MAKEFILE;
 
         self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
+    public function matchedLineIsHelpAnnotatedTargetRequiresHelpTypeMarker(): void
+    {
+        $method = new ReflectionMethod(TaskListInjector::class, 'matchedLineIsHelpAnnotatedTarget');
+
+        self::assertTrue($method->invoke(null, 'target: ## desc ##*A*##'));
+        self::assertFalse($method->invoke(null, 'target: ## desc without type marker'));
+    }
+
+    #[Test]
+    public function helpAnnotatedMatchIndicesSkipsLinesWithoutHelpTypeMarker(): void
+    {
+        $fullLineMatches = [
+            0 => ['decoy: no marker', 0],
+            1 => ['good: ## x ##*A*##', 10],
+        ];
+        $method          = new ReflectionMethod(TaskListInjector::class, 'helpAnnotatedMatchIndices');
+
+        self::assertSame([1], $method->invoke(null, $fullLineMatches));
+    }
+
+    #[Test]
+    public function allPipedFeaturesEnabledRequiresEveryFeatureInPipe(): void
+    {
+        $method                                          = new ReflectionMethod(TaskListInjector::class, 'allPipedFeaturesEnabled');
+        $features                                        = SupportedFeatures::DEFAULTS;
+        $features[SupportedFeatures::FEATURE_CODE_STYLE] = false;
+
+        self::assertFalse($method->invoke(null, 'code-style|unit-tests', $features));
+        self::assertTrue($method->invoke(null, 'unit-tests', $features));
     }
 
     /**

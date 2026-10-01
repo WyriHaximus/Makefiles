@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
+use function array_values;
 use function implode;
+use function ksort;
 use function preg_match;
 use function preg_match_all;
 use function str_contains;
@@ -14,7 +16,8 @@ use function strlen;
 use function strpos;
 use function substr;
 use function trim;
-use function usort;
+
+use const SORT_STRING;
 
 final class HelpInjector
 {
@@ -51,16 +54,9 @@ final class HelpInjector
             }
 
             $target         = $matches[1][$i];
-            $haspos         = strpos($matches[2][$i], '#');
-            $helpLine       = trim(
-                $target . ': ## ' . substr(
-                    $matches[2][$i],
-                    0,
-                    $haspos !== false ? $haspos : strlen($matches[2][$i]),
-                ),
-            );
+            $helpLine       = self::buildHelpLine($target, $matches[2][$i]);
             $isMigration    = str_starts_with($target, 'migrations-');
-            $hasContribFlag = preg_match('/##\*([AEDILCH]+)\*/', $fullLine, $typeMatch) === 1 && str_contains($typeMatch[1], 'E');
+            $hasContribFlag = self::helpLineHasContribExecutorFlag($fullLine);
 
             if (! $isMigration) {
                 $helpTargets['main'][] = [
@@ -87,8 +83,7 @@ final class HelpInjector
         }
 
         foreach (['main', 'migrations', 'contrib'] as $helpType) {
-            $entries = $helpTargets[$helpType];
-            usort($entries, static fn (array $a, array $b): int => $a[0] <=> $b[0]);
+            $entries = self::sortHelpEntriesByTargetName($helpTargets[$helpType]);
 
             $helpBannerLines = match ($helpType) {
                 'main' => $bannerLines,
@@ -138,5 +133,48 @@ final class HelpInjector
     private static function shellQuote(string $value): string
     {
         return "'" . str_replace("'", "'\\''", $value) . "'";
+    }
+
+    /**
+     * @param list<array{0: string, 1: string}> $entries
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    private static function sortHelpEntriesByTargetName(array $entries): array
+    {
+        $entriesByTarget = [];
+        foreach ($entries as $entry) {
+            $entriesByTarget[$entry[0]] = $entry;
+        }
+
+        ksort($entriesByTarget, SORT_STRING);
+
+        return array_values($entriesByTarget);
+    }
+
+    private static function buildHelpLine(string $target, string $rawHelpSuffix): string
+    {
+        return trim($target . ': ## ' . substr($rawHelpSuffix, 0, self::helpSuffixSegmentEnd($rawHelpSuffix)));
+    }
+
+    private static function helpSuffixSegmentEnd(string $rawHelpSuffix): int
+    {
+        $hashPosition = strpos($rawHelpSuffix, '#');
+
+        return $hashPosition !== false ? $hashPosition : strlen($rawHelpSuffix);
+    }
+
+    private static function helpLineHasContribExecutorFlag(string $fullLine): bool
+    {
+        if (preg_match('/##\*([AEDILCH]+)\*/', $fullLine, $typeMatch) !== 1) {
+            return false;
+        }
+
+        return self::executorFlagsIncludeE($typeMatch[1]);
+    }
+
+    private static function executorFlagsIncludeE(string $flags): bool
+    {
+        return str_contains($flags, 'E') && ! str_contains($flags, '*');
     }
 }

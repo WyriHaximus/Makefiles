@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WyriHaximus\Tests\Makefiles\Composer\Installer;
 
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use WyriHaximus\Makefiles\Composer\Installer\AsciiBannerGenerator;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
 use WyriHaximus\Tests\Makefiles\TestCase;
@@ -12,6 +13,8 @@ use WyriHaximus\Tests\Makefiles\TestCase;
 use function chmod;
 use function file_put_contents;
 use function mkdir;
+use function restore_error_handler;
+use function set_error_handler;
 
 final class AsciiBannerGeneratorTest extends TestCase
 {
@@ -19,6 +22,15 @@ final class AsciiBannerGeneratorTest extends TestCase
     public function forTextRendersAsciiBanner(): void
     {
         self::assertCount(4, AsciiBannerGenerator::forText('contrib'));
+    }
+
+    #[Test]
+    public function forTextNormalizesCase(): void
+    {
+        self::assertSame(
+            AsciiBannerGenerator::forText('contrib'),
+            AsciiBannerGenerator::forText('Contrib'),
+        );
     }
 
     #[Test]
@@ -40,6 +52,24 @@ final class AsciiBannerGeneratorTest extends TestCase
         mkdir($root);
 
         self::assertSame([], AsciiBannerGenerator::forPackage($root));
+    }
+
+    #[Test]
+    public function forPackageReturnsEmptyWhenComposerJsonIsDirectory(): void
+    {
+        $root = $this->getTmpDir() . 'composer-json-dir/';
+        mkdir($root);
+        mkdir($root . 'composer.json');
+
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new RuntimeException($message, $severity);
+        });
+
+        try {
+            self::assertSame([], AsciiBannerGenerator::forPackage($root));
+        } finally {
+            restore_error_handler();
+        }
     }
 
     #[Test]
@@ -75,7 +105,15 @@ final class AsciiBannerGeneratorTest extends TestCase
         chmod($root . 'composer.json', 0000);
 
         try {
-            self::assertSame([], AsciiBannerGenerator::forPackage($root));
+            set_error_handler(static function (int $severity, string $message): never {
+                throw new RuntimeException($message, $severity);
+            });
+
+            try {
+                self::assertSame([], AsciiBannerGenerator::forPackage($root));
+            } finally {
+                restore_error_handler();
+            }
         } finally {
             chmod($root . 'composer.json', 0644);
         }

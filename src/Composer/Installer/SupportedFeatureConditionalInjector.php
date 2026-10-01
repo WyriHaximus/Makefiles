@@ -49,14 +49,19 @@ final class SupportedFeatureConditionalInjector
     {
         $value = trim($value);
 
-        if ($value === '""') {
-            return '';
+        if (self::valueTooShortForQuoteStripping($value)) {
+            return $value;
         }
 
-        if (strlen($value) >= 2 && $value[0] === '"' && $value[strlen($value) - 1] === '"') {
-            return substr($value, 1, -1);
+        if ($value[0] !== '"' || $value[strlen($value) - 1] !== '"') {
+            return $value;
         }
 
-        return $value;
+        return substr($value, 1, -1);
+    }
+
+    private static function valueTooShortForQuoteStripping(string $value): bool
+    {
+        return strlen($value) < 2;
     }
 }
