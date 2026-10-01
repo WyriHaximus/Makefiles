@@ -58,14 +58,11 @@ final class IncludeLoader
     {
         $candidatePath = $makefilesPackageRoot . $filename;
         if (! file_exists($candidatePath)) {
-            // @infection-ignore-all
             return '';
         }
 
         $makefileIncludePath = new SplFileInfo($candidatePath)->getRealPath();
-        // @infection-ignore-all
         if ($makefileIncludePath === false || ! is_file($makefileIncludePath) || ! is_readable($makefileIncludePath)) {
-            // @infection-ignore-all
             return '';
         }
 
@@ -85,13 +82,10 @@ final class IncludeLoader
     private static function isRealPathInsideRoot(string $fileRealPath, string $rootRealPath): bool
     {
         $normalizedFilePath = self::normalizePathForComparison($fileRealPath);
-        // @infection-ignore-all
         $normalizedRootPath = rtrim(self::normalizePathForComparison($rootRealPath), '/') . '/';
 
         if (
-            // @infection-ignore-all
             (strlen($normalizedFilePath) >= 2 && $normalizedFilePath[1] === ':')
-            // @infection-ignore-all
             || (strlen($normalizedRootPath) >= 2 && $normalizedRootPath[1] === ':')
         ) {
             $normalizedFilePath = strtolower($normalizedFilePath);
@@ -103,7 +97,6 @@ final class IncludeLoader
 
     private static function normalizePathForComparison(string $path): string
     {
-        // @infection-ignore-all
         $path = str_replace('\\', '/', $path);
 
         if (str_starts_with($path, '//?/')) {

@@ -81,7 +81,6 @@ final class TaskListInjector
             PREG_OFFSET_CAPTURE,
         );
 
-        // @infection-ignore-all
         foreach ($matches[0] as $i => $_fullLine) {
             foreach ($typesToTaskMap as $type => $taskMap) {
                 if (! str_contains($matches['types'][$i][0], $type)) {
@@ -104,7 +103,6 @@ final class TaskListInjector
                     if (($matches['features'][$i][0] ?? '') !== '') {
                         foreach (explode('|', $matches['features'][$i][0]) as $feature) {
                             if (! array_key_exists($feature, $context->supportedFeatures) || $context->supportedFeatures[$feature] === false) {
-                                // @infection-ignore-all
                                 continue 3;
                             }
                         }

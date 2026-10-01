@@ -37,7 +37,6 @@ final class SupportedFeaturesResolver
             }
 
             if ($packageOrExtension !== 'ext-pcntl') {
-                // @infection-ignore-all
                 continue;
             }
 

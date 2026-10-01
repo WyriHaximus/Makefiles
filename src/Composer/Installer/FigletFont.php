@@ -135,7 +135,6 @@ final readonly class FigletFont
     {
         $glyphs = [];
         foreach (self::MINI_GLYPHS as $character => $rows) {
-            // @infection-ignore-all
             $glyphs[(string) $character] = $rows;
         }
 
@@ -150,13 +149,11 @@ final readonly class FigletFont
 
         for ($position = 0; $position < $length; $position++) {
             $character = $text[$position];
-            // @infection-ignore-all
-            $glyph = $this->glyphs[$character] ?? $this->glyphs['?'] ?? array_fill(0, $this->height, '');
+            $glyph     = $this->glyphs[$character] ?? $this->glyphs['?'] ?? array_fill(0, $this->height, '');
 
             for ($row = 0; $row < $this->height; $row++) {
                 $output[$row] .= $glyph[$row];
 
-                // @infection-ignore-all
                 if ($position >= $length - 1) {
                     continue;
                 }

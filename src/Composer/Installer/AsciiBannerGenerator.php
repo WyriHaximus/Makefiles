@@ -22,7 +22,6 @@ final class AsciiBannerGenerator
     /** @return list<string> */
     public static function forText(string $text): array
     {
-        // @infection-ignore-all
         return FigletFont::mini()->render(strtolower($text));
     }
 
@@ -40,7 +39,6 @@ final class AsciiBannerGenerator
     private static function readPackageName(string $rootPackagePath): string|null
     {
         $composerJsonPath = $rootPackagePath . 'composer.json';
-        // @infection-ignore-all
         if (! is_file($composerJsonPath) || ! is_readable($composerJsonPath)) {
             return null;
         }
