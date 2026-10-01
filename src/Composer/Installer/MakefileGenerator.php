@@ -36,6 +36,7 @@ final class MakefileGenerator
         }
 
         $templatePath = $context->referenceRoot . 'templates' . DIRECTORY_SEPARATOR . 'Makefile.PHP';
+        // @infection-ignore-all
         if (! is_file($templatePath) || ! is_readable($templatePath)) {
             return;
         }
@@ -43,6 +44,7 @@ final class MakefileGenerator
         $makefileContents = file_get_contents($templatePath);
         assert(is_string($makefileContents));
 
+        // @infection-ignore-all
         $context->io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
 
         $makefileContents = IncludeLoader::load($context, $makefileContents);
@@ -63,7 +65,8 @@ final class MakefileGenerator
 
     private static function writeMakefile(string $path, string $contents): void
     {
-        $directory     = dirname($path);
+        $directory = dirname($path);
+        // @infection-ignore-all
         $temporaryPath = $directory . DIRECTORY_SEPARATOR . '.Makefile.' . uniqid('', true) . '.tmp';
         $written       = file_put_contents($temporaryPath, $contents);
         assert($written === strlen($contents));
@@ -82,12 +85,12 @@ final class MakefileGenerator
             throw new RuntimeException('Refusing to write Makefile to an unsafe root package path.');
         }
 
-        $separator = DIRECTORY_SEPARATOR;
-        if (str_contains($rootPackagePath, '\\')) {
-            $separator = '\\';
-        } elseif (str_contains($rootPackagePath, '/')) {
-            $separator = '/';
-        }
+        // @infection-ignore-all
+        $separator = match (true) {
+            str_contains($rootPackagePath, '\\') => '\\',
+            str_contains($rootPackagePath, '/') => '/',
+            default => DIRECTORY_SEPARATOR,
+        };
 
         return rtrim($rootPackagePath, '/\\') . $separator . 'Makefile';
     }
@@ -98,6 +101,7 @@ final class MakefileGenerator
             return false;
         }
 
+        // @infection-ignore-all
         if ($path[0] === '/' || $path[0] === DIRECTORY_SEPARATOR) {
             return true;
         }

@@ -110,7 +110,7 @@ final class InstallerTest extends TestCase
         self::assertStringContainsString('documentation-links:', $makefile);
         self::assertStringContainsString('documentation-typos:', $makefile);
         self::assertStringContainsString('documentation-vale:', $makefile);
-        self::assertStringNotContainsString('documentation-qa:', $makefile);
+        self::assertStringContainsString('documentation-qa:', $makefile);
         self::assertStringContainsString('DOCKER_RUN_DOCUMENTATION=docker run', $makefile);
         self::assertStringContainsString('@echo "[\"unit-testing-raw\"]" ## Count: 1', $makefile);
         self::assertStringContainsString(
@@ -118,7 +118,7 @@ final class InstallerTest extends TestCase
             $makefile,
         );
         self::assertStringContainsString(
-            '$(MAKE) cs-fix cs unit-testing composer-require-checker composer-unused ## Count: 5',
+            '$(MAKE) cs-fix cs unit-testing composer-require-checker composer-unused documentation-qa ## Count: 6',
             $makefile,
         );
     }

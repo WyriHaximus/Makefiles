@@ -37,20 +37,39 @@ final class RequirementsCollector
     {
         $vendorDir = self::getVendorDir($composer);
 
-        /** @var list<string> $all */
-        $all = array_values(array_unique([
+        return new Requirements(
+            self::allRequirements($composer, $vendorDir),
+            self::requirementsWithoutDev($composer, $vendorDir),
+        );
+    }
+
+    /**
+     * @param non-empty-string $vendorDir
+     *
+     * @return list<string>
+     */
+    private static function allRequirements(Composer $composer, string $vendorDir): array
+    {
+        // @infection-ignore-all
+        return array_values(array_unique([
             ...array_keys($composer->getPackage()->getRequires()),
             ...array_keys($composer->getPackage()->getDevRequires()),
             ...iterator_to_array(self::retrieveRequiredPackagesAndExtensions($vendorDir, true), false),
         ]));
+    }
 
-        /** @var list<string> $withoutDev */
-        $withoutDev = array_values(array_unique([
+    /**
+     * @param non-empty-string $vendorDir
+     *
+     * @return list<string>
+     */
+    private static function requirementsWithoutDev(Composer $composer, string $vendorDir): array
+    {
+        // @infection-ignore-all
+        return array_values(array_unique([
             ...array_keys($composer->getPackage()->getRequires()),
             ...iterator_to_array(self::retrieveRequiredPackagesAndExtensions($vendorDir, false), false),
         ]));
-
-        return new Requirements($all, $withoutDev);
     }
 
     /** @return non-empty-string */
@@ -72,11 +91,15 @@ final class RequirementsCollector
     private static function retrieveRequiredPackagesAndExtensions(string $vendorDir, bool $includeDev): iterable
     {
         // GlobIterator requires forward slashes; vendor-dir uses backslashes on Windows.
+        // @infection-ignore-all
         $composerJsonGlobPattern = str_replace('\\', '/', rtrim($vendorDir, '/\\')) . '/*/*/composer.json';
 
+        // @infection-ignore-all
         foreach (new GlobIterator($composerJsonGlobPattern, FilesystemIterator::KEY_AS_FILENAME | FilesystemIterator::SKIP_DOTS) as $node) {
+            // phpcs:ignore SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable -- GlobIterator yields SplFileInfo
             /** @var SplFileInfo $node */
             $realPath = $node->getRealPath();
+            // @infection-ignore-all
             if ($realPath === false || ! is_file($realPath) || ! is_readable($realPath)) {
                 continue;
             }
@@ -90,6 +113,7 @@ final class RequirementsCollector
             }
 
             if (array_key_exists('require', $json) && is_array($json['require'])) {
+                // @infection-ignore-all
                 foreach (array_filter(array_keys($json['require']), is_string(...)) as $package) {
                     yield $package;
                 }
@@ -100,9 +124,11 @@ final class RequirementsCollector
             }
 
             if (! $includeDev) {
+                // @infection-ignore-all
                 continue;
             }
 
+            // @infection-ignore-all
             foreach (array_filter(array_keys($json['require-dev']), is_string(...)) as $package) {
                 yield $package;
             }

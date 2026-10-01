@@ -178,18 +178,9 @@ MAKEFILE);
             'D:\\a\\Makefiles\\Makefiles\\Makefile',
         ];
 
-        if (DIRECTORY_SEPARATOR === '\\') {
-            yield 'drive path without slashes on windows' => [
-                'D:\\project',
-                'D:\\project\\Makefile',
-            ];
-
-            return;
-        }
-
-        yield 'drive path without slashes on unix' => [
+        yield 'drive path without slash characters uses directory separator' => [
             'D:project',
-            'D:project/Makefile',
+            'D:project' . DIRECTORY_SEPARATOR . 'Makefile',
         ];
     }
 

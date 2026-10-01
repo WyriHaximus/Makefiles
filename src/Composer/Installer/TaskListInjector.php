@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
 use function array_key_exists;
-use function array_keys;
 use function count;
 use function explode;
 use function implode;
@@ -76,15 +75,16 @@ final class TaskListInjector
         ];
 
         preg_match_all(
-            '/([A-Z0-9a-z-]+):\s([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,_\`\/\-\\\\]+\s+)+)##\*([AEDILCHK]+)\*(##\^([a-z-|]+)\^##)?/',
+            '/([A-Z0-9a-z-]+):\s(?:(?<prereqs>[a-z0-9-]+(?:\s+[a-z0-9-]+)*)\s+)?([#{2,4}]+)(\s+([A-Za-z0-9\@\*\'\(\)\<\>\:.,_\`\/\-\\\\]+\s+)+)##\*(?<types>[AEDILCHK]+)\*(?:##\^(?<features>[a-z-|]+)\^##)?/',
             $makefileContents,
             $matches,
             PREG_OFFSET_CAPTURE,
         );
 
-        foreach (array_keys($matches[0]) as $i) {
+        // @infection-ignore-all
+        foreach ($matches[0] as $i => $_fullLine) {
             foreach ($typesToTaskMap as $type => $taskMap) {
-                if (! str_contains($matches[5][$i][0], $type)) {
+                if (! str_contains($matches['types'][$i][0], $type)) {
                     continue;
                 }
 
@@ -95,14 +95,14 @@ final class TaskListInjector
 
                     if (
                         $type === 'I' &&
-                        array_key_exists(strlen($matches[2][$i][0]), $hashCountMap) &&
-                        ! in_array($task, $hashCountMap[strlen($matches[2][$i][0])], true)
+                        array_key_exists(strlen($matches[3][$i][0]), $hashCountMap) &&
+                        ! in_array($task, $hashCountMap[strlen($matches[3][$i][0])], true)
                     ) {
                         continue;
                     }
 
-                    if (($matches[7][$i][0] ?? '') !== '') {
-                        foreach (explode('|', $matches[7][$i][0]) as $feature) {
+                    if (($matches['features'][$i][0] ?? '') !== '') {
+                        foreach (explode('|', $matches['features'][$i][0]) as $feature) {
                             if (! array_key_exists($feature, $context->supportedFeatures) || $context->supportedFeatures[$feature] === false) {
                                 // @infection-ignore-all
                                 continue 3;

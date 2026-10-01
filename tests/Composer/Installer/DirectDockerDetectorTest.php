@@ -65,6 +65,90 @@ final class DirectDockerDetectorTest extends TestCase
             true,
         ];
 
+        yield 'documentation qa aggregate prerequisite targets use docker' => [
+            "DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag\n\ndocumentation-markdownlint: ## lint ##*K*##\n\t\$(DOCKER_RUN_DOCUMENTATION) markdown .\n\ndocumentation-qa: documentation-markdownlint ## qa ##*E*##\n",
+            'documentation-qa',
+            true,
+        ];
+
+        yield 'docker on second recipe line' => [
+            "two-step: ## x ##\n\techo local\n\tdocker run --rm image cmd\n",
+            'two-step',
+            true,
+        ];
+
+        yield 'embedded tab docker in echo line is not direct docker' => [
+            "misleading: ## x ##\n\techo \"\\tdocker fake\"\n\tphp bin/local.php\n",
+            'misleading',
+            false,
+        ];
+
+        yield 'double tab before docker is not treated as direct docker recipe line' => [
+            "double-tab: ## x ##\n\t\tdocker run --rm image cmd\n",
+            'double-tab',
+            false,
+        ];
+
+        yield 'regex special target names resolve the intended prerequisite recipe' => [
+            <<<'MAKEFILE'
+myXtarget: ## decoy ##
+	echo local
+my.target: ## real ##
+	docker run --rm image cmd
+parent: my.target ## p ##*E*##
+MAKEFILE,
+            'parent',
+            true,
+        ];
+
+        yield 'docker wrapper value must start with docker after trim' => [
+            "MYTOOL=x docker run --rm image\n\nfmt: ## x ##\n\t\$(MYTOOL) cmd\n",
+            'fmt',
+            false,
+        ];
+
+        yield 'docker wrapper assignment may use leading space before docker' => [
+            "MYTOOL= docker run --rm image\n\nfmt: ## x ##\n\t\$(MYTOOL) cmd\n",
+            'fmt',
+            true,
+        ];
+
+        yield 'second custom docker wrapper variable is detected' => [
+            <<<'MAKEFILE'
+TOOLA=docker run --rm image-a
+TOOLB=docker run --rm image-b
+fmt-b: ## fmt ##*I*##
+	$(TOOLB) fmt
+MAKEFILE,
+            'fmt-b',
+            true,
+        ];
+
+        yield 'multiple make sub-targets in one recipe' => [
+            <<<'MAKEFILE'
+aggregate: ## x ##*I*##
+	$(MAKE) step-a $(MAKE) step-b
+step-a: ####
+	echo local
+step-b: ####
+	docker run --rm image cmd
+MAKEFILE,
+            'aggregate',
+            true,
+        ];
+
+        yield 'prerequisite chain finds docker in later prerequisite' => [
+            <<<'MAKEFILE'
+child: ## c ##*I*##
+	docker run --rm image
+parent: no-docker child ## p ##*E*##
+no-docker: ## n ##*I*##
+	echo local
+MAKEFILE,
+            'parent',
+            true,
+        ];
+
         yield 'framework docker run variable is ignored' => [
             "DOCKER_RUN:=docker run --rm ghcr.io/example/php:8.4-dev\n\ncomposer-normalize: ## normalize ##*I*##\n\t\$(DOCKER_RUN) composer normalize\n",
             'composer-normalize',
@@ -105,6 +189,12 @@ final class DirectDockerDetectorTest extends TestCase
             "solo-target: ## solo ##*I*##\n",
             'solo-target',
             false,
+        ];
+
+        yield 'prerequisite only target at eof without trailing newline' => [
+            "child: ## c ##\n\tdocker run --rm image\nparent: child ## p ##*E*##",
+            'parent',
+            true,
         ];
 
         yield 'recipe after comment lines' => [
@@ -187,14 +277,14 @@ MAKEFILE,
         yield 'docker tasks present' => [
             "ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)\n\nall-target: ## x ##\n\tdocker build .\n",
             ['all' => ['all-target']],
-            'ALL_HAS_DIRECT_DOCKER_TASKS=TRUE',
+            "ALL_HAS_DIRECT_DOCKER_TASKS=TRUE\n\nall-target: ## x ##\n\tdocker build .\n",
             false,
         ];
 
         yield 'no docker tasks' => [
             "ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)\n\nall-target: ## x ##\n\tphp bin/test.php\n",
             ['all' => ['all-target']],
-            'ALL_HAS_DIRECT_DOCKER_TASKS=FALSE',
+            "ALL_HAS_DIRECT_DOCKER_TASKS=FALSE\n\nall-target: ## x ##\n\tphp bin/test.php\n",
             false,
         ];
 
@@ -227,7 +317,26 @@ documentation-vale: ## Vale ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini .
 MAKEFILE,
             ['ci-locked' => ['documentation-markdownlint', 'documentation-links', 'documentation-typos', 'documentation-vale']],
-            'ALL_HAS_DIRECT_DOCKER_TASKS=TRUE',
+            <<<'MAKEFILE'
+ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
+DOCKER_RUN_DOCUMENTATION=docker run --rm -i image:tag
+IMAGE_MARKDOWNLINT := markdown:tag
+IMAGE_LYCHEE := lychee:tag
+IMAGE_CSPELL := cspell:tag
+IMAGE_VALE := vale:tag
+
+documentation-markdownlint: ## Lint ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_MARKDOWNLINT) --config etc/qa/documentation.markdownlint-cli2.yaml
+
+documentation-links: ## Links ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
+
+documentation-typos: ## Typos ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json .
+
+documentation-vale: ## Vale ##*K*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini .
+MAKEFILE,
             false,
         ];
     }
@@ -235,7 +344,7 @@ MAKEFILE,
     /** @param array<string, list<string>> $aggregates */
     #[Test]
     #[DataProvider('provideInjectFlagsCases')]
-    public function injectFlags(string $makefile, array $aggregates, string $expectedFragment, bool $throws): void
+    public function injectFlags(string $makefile, array $aggregates, string $expectedMakefile, bool $throws): void
     {
         if ($throws) {
             $this->expectException(RuntimeException::class);
@@ -248,7 +357,7 @@ MAKEFILE,
             return;
         }
 
-        self::assertStringContainsString($expectedFragment, $result);
+        self::assertSame($expectedMakefile, $result);
     }
 
     #[Test]
@@ -276,5 +385,80 @@ MAKEFILE,
 
         self::assertSame('', $method->invoke(null, "solo-target: ## solo ##*I*##\n", 'solo-target'));
         self::assertSame('', $method->invoke(null, "empty-recipe: ## empty ##*I*##\nother-target: ## other ##\n\techo other\n", 'empty-recipe'));
+    }
+
+    #[Test]
+    public function extractTargetPrerequisitesParsesDependenciesBeforeHelpMarker(): void
+    {
+        $method   = new ReflectionMethod(DirectDockerDetector::class, 'extractTargetPrerequisites');
+        $makefile = "documentation-qa: documentation-markdownlint documentation-links ## Run all ##*E*##\n";
+
+        self::assertSame(
+            ['documentation-markdownlint', 'documentation-links'],
+            $method->invoke(null, $makefile, 'documentation-qa'),
+        );
+        self::assertSame([], $method->invoke(null, $makefile, 'missing-target'));
+        self::assertSame([], $method->invoke(null, "only-help: ## no deps ##*E*##\n", 'only-help'));
+        self::assertSame(['doc'], $method->invoke(null, "meta: | doc ## m ##*E*##\n", 'meta'));
+        self::assertSame(
+            ['documentation-markdownlint'],
+            $method->invoke(null, "documentation-qa:   documentation-markdownlint ## qa ##\n", 'documentation-qa'),
+        );
+        self::assertSame(['dep'], $method->invoke(null, "my.target: dep ## x ##\n", 'my.target'));
+        self::assertSame(
+            ['dep'],
+            $method->invoke(null, "myXtarget: evil ## x ##\nmy.target: dep ## x ##\n", 'my.target'),
+        );
+        self::assertSame(['doc'], $method->invoke(null, "meta: doc   ## x ##\n", 'meta'));
+    }
+
+    #[Test]
+    public function extractTargetRecipeReturnsRecipeWithTrailingNewline(): void
+    {
+        $method = new ReflectionMethod(DirectDockerDetector::class, 'extractTargetRecipe');
+
+        self::assertSame(
+            "\techo local\n\tdocker run --rm image cmd\n",
+            $method->invoke(null, "two-step: ## x ##\n\techo local\n\tdocker run --rm image cmd\n", 'two-step'),
+        );
+        self::assertSame(
+            "\tdocker run --rm image fmt\n",
+            $method->invoke(null, "my.target: ## fmt ##\n\tdocker run --rm image fmt\n", 'my.target'),
+        );
+        self::assertSame(
+            '',
+            $method->invoke(null, 'parent: child ## p ##', 'parent'),
+        );
+    }
+
+    #[Test]
+    public function injectFlagsReplacesAllMatchingPlaceholders(): void
+    {
+        $input = <<<'MAKEFILE'
+ALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)
+CONTRIB_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(contrib, TRUE, FALSE)
+
+all-task: ## x ##
+	docker run image
+
+contrib-task: ## y ##
+	php bin/x.php
+MAKEFILE;
+
+        $expected = <<<'MAKEFILE'
+ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
+CONTRIB_HAS_DIRECT_DOCKER_TASKS=FALSE
+
+all-task: ## x ##
+	docker run image
+
+contrib-task: ## y ##
+	php bin/x.php
+MAKEFILE;
+
+        self::assertSame($expected, DirectDockerDetector::injectFlags($input, [
+            'all' => ['all-task'],
+            'contrib' => ['contrib-task'],
+        ]));
     }
 }
