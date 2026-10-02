@@ -22,13 +22,14 @@ use function is_dir;
 use function is_file;
 use function is_readable;
 use function is_string;
-use function iterator_to_array;
 use function json_decode;
 use function rtrim;
 use function str_replace;
 
 final class RequirementsCollector
 {
+    private const int VENDOR_COMPOSER_JSON_GLOB_FLAGS = FilesystemIterator::KEY_AS_FILENAME | FilesystemIterator::SKIP_DOTS;
+
     private function __construct()
     {
     }
@@ -50,10 +51,15 @@ final class RequirementsCollector
      */
     private static function allRequirements(Composer $composer, string $vendorDir): array
     {
+        $vendorPackages = [];
+        foreach (self::retrieveRequiredPackagesAndExtensions($vendorDir, true) as $package) {
+            $vendorPackages[] = $package;
+        }
+
         return array_values(array_unique([
             ...array_keys($composer->getPackage()->getRequires()),
             ...array_keys($composer->getPackage()->getDevRequires()),
-            ...iterator_to_array(self::retrieveRequiredPackagesAndExtensions($vendorDir, true), false),
+            ...$vendorPackages,
         ]));
     }
 
@@ -64,9 +70,14 @@ final class RequirementsCollector
      */
     private static function requirementsWithoutDev(Composer $composer, string $vendorDir): array
     {
+        $vendorPackages = [];
+        foreach (self::retrieveRequiredPackagesAndExtensions($vendorDir, false) as $package) {
+            $vendorPackages[] = $package;
+        }
+
         return array_values(array_unique([
             ...array_keys($composer->getPackage()->getRequires()),
-            ...iterator_to_array(self::retrieveRequiredPackagesAndExtensions($vendorDir, false), false),
+            ...$vendorPackages,
         ]));
     }
 
@@ -88,42 +99,62 @@ final class RequirementsCollector
      */
     private static function retrieveRequiredPackagesAndExtensions(string $vendorDir, bool $includeDev): iterable
     {
-        // GlobIterator requires forward slashes; vendor-dir uses backslashes on Windows.
-        $composerJsonGlobPattern = str_replace('\\', '/', rtrim($vendorDir, '/\\')) . '/*/*/composer.json';
+        $composerJsonGlobPattern = self::vendorComposerJsonGlobPattern($vendorDir);
 
-        foreach (new GlobIterator($composerJsonGlobPattern, FilesystemIterator::KEY_AS_FILENAME | FilesystemIterator::SKIP_DOTS) as $node) {
-            // phpcs:ignore SlevomatCodingStandard.Commenting.InlineDocCommentDeclaration.MissingVariable -- GlobIterator yields SplFileInfo
+        foreach (new GlobIterator($composerJsonGlobPattern, self::VENDOR_COMPOSER_JSON_GLOB_FLAGS | FilesystemIterator::SKIP_DOTS) as $node) {
             /** @var SplFileInfo $node */
-            $realPath = $node->getRealPath();
-            if ($realPath === false || ! is_file($realPath) || ! is_readable($realPath)) {
-                continue;
-            }
+            yield from self::packagesFromVendorComposerJsonNode($node, $includeDev);
+        }
+    }
 
-            $composerJson = file_get_contents($realPath);
-            assert(is_string($composerJson));
+    /** @return iterable<string> */
+    private static function packagesFromVendorComposerJsonNode(SplFileInfo $node, bool $includeDev): iterable
+    {
+        $realPath = $node->getRealPath();
+        if ($realPath === false) {
+            return;
+        }
 
-            $json = json_decode($composerJson, true);
-            if (! is_array($json)) {
-                continue;
-            }
+        if (! self::vendorComposerJsonPathIsAccessible($realPath)) {
+            return;
+        }
 
-            if (array_key_exists('require', $json) && is_array($json['require'])) {
-                foreach (array_filter(array_keys($json['require']), is_string(...)) as $package) {
-                    yield $package;
-                }
-            }
+        $composerJson = file_get_contents($realPath);
+        assert(is_string($composerJson));
 
-            if (! array_key_exists('require-dev', $json) || ! is_array($json['require-dev'])) {
-                continue;
-            }
+        $json = json_decode($composerJson, true);
+        if (! is_array($json)) {
+            return;
+        }
 
-            if (! $includeDev) {
-                continue;
-            }
-
-            foreach (array_filter(array_keys($json['require-dev']), is_string(...)) as $package) {
+        if (array_key_exists('require', $json) && is_array($json['require'])) {
+            foreach (array_filter(array_keys($json['require']), is_string(...)) as $package) {
                 yield $package;
             }
         }
+
+        if (! array_key_exists('require-dev', $json) || ! is_array($json['require-dev'])) {
+            return;
+        }
+
+        if (! $includeDev) {
+            return;
+        }
+
+        foreach (array_filter(array_keys($json['require-dev']), is_string(...)) as $package) {
+            yield $package;
+        }
+    }
+
+    private static function vendorComposerJsonPathIsAccessible(string $realPath): bool
+    {
+        return is_file($realPath) && is_readable($realPath);
+    }
+
+    /** @return non-empty-string */
+    private static function vendorComposerJsonGlobPattern(string $vendorDir): string
+    {
+        // GlobIterator requires forward slashes; vendor-dir uses backslashes on Windows.
+        return str_replace('\\', '/', rtrim($vendorDir, '/\\')) . '/*/*/composer.json';
     }
 }

@@ -30,8 +30,8 @@ final class ServiceLifecycleInjector
      */
     public static function inject(string $makefileContents): string
     {
-        if (! str_contains($makefileContents, 'service_start(') && ! str_contains($makefileContents, 'service_cleanup(')) {
-            return $makefileContents;
+        if (! self::makefileDeclaresServiceLifecyclePlaceholders($makefileContents)) {
+            return self::unchangedMakefile($makefileContents);
         }
 
         $availableTargets = self::extractMakefileTargets($makefileContents);
@@ -44,7 +44,7 @@ final class ServiceLifecycleInjector
         while ($index < $count) {
             $line = $lines[$index];
 
-            if (preg_match('/^([a-z0-9-]+):/', $line) !== 1) {
+            if (! self::isMakefileTargetDefinitionLine($line)) {
                 $output[] = $line;
                 $index++;
 
@@ -97,9 +97,10 @@ final class ServiceLifecycleInjector
                 continue;
             }
 
-            if (preg_match('/^\tservice_cleanup\(([a-z0-9-]+)\)/', $recipeLine, $matches) === 1) {
-                if (in_array($matches[1], $availableTargets, true)) {
-                    $cleanupTargets[] = $matches[1];
+            $cleanupTarget = self::serviceCleanupTargetFromRecipeLine($recipeLine);
+            if ($cleanupTarget !== null) {
+                if (in_array($cleanupTarget, $availableTargets, true)) {
+                    $cleanupTargets[] = $cleanupTarget;
                 }
 
                 continue;
@@ -143,5 +144,33 @@ final class ServiceLifecycleInjector
         preg_match_all('/^([a-z0-9-]+):/m', $makefileContents, $matches);
 
         return array_values(array_unique($matches[1]));
+    }
+
+    private static function makefileDeclaresServiceLifecyclePlaceholders(string $makefileContents): bool
+    {
+        return str_contains($makefileContents, 'service_start(') || str_contains($makefileContents, 'service_cleanup(');
+    }
+
+    private static function isMakefileTargetDefinitionLine(string $line): bool
+    {
+        return preg_match('/^([a-z0-9-]+):/', $line) === 1;
+    }
+
+    private static function serviceCleanupTargetFromRecipeLine(string $recipeLine): string|null
+    {
+        if (! str_starts_with($recipeLine, "\tservice_cleanup(")) {
+            return null;
+        }
+
+        if (preg_match('/^\tservice_cleanup\(([a-z0-9-]+)\)\z/', $recipeLine, $matches) !== 1) {
+            return null;
+        }
+
+        return $matches[1];
+    }
+
+    private static function unchangedMakefile(string $makefileContents): string
+    {
+        return $makefileContents;
     }
 }

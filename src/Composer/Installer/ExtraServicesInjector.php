@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
+use function array_any;
+use function explode;
 use function file_get_contents;
 use function is_file;
 use function is_string;
@@ -27,32 +29,61 @@ final class ExtraServicesInjector
      */
     public static function inject(string $makefileContents, string $rootPackagePath): string
     {
-        preg_match_all(
-            '/([A-Z_]+)=when_target_exists_in_extra\(([a-z0-9-]+),\s+([A-Za-z0-9\"-]+),\s+([A-Za-z0-9,\"-]+)\)/',
+        $matchCount = preg_match_all(
+            '/([A-Z_]+)=when_target_exists_in_extra\(([a-z0-9.-]+),\s+([A-Za-z0-9\"-]+),\s+([A-Za-z0-9,\"-]+)\)/',
             $makefileContents,
             $matches,
             PREG_OFFSET_CAPTURE,
         );
 
-        if ($matches[0] === []) {
-            return $makefileContents;
+        $result = $makefileContents;
+
+        if ($matchCount !== 0) {
+            $etcMakefile = self::readEtcMakefile($rootPackagePath);
+
+            foreach ($matches[0] as $i => $fullLine) {
+                $targetName = $matches[2][$i][0];
+                $hasTarget  = is_string($etcMakefile) && self::etcMakefileDefinesTarget($etcMakefile, $targetName);
+
+                $result = str_replace(
+                    $fullLine[0],
+                    $matches[1][$i][0] . '=' . ($hasTarget ? $matches[3][$i][0] : $matches[4][$i][0]),
+                    $result,
+                );
+            }
         }
 
+        return $result;
+    }
+
+    private static function readEtcMakefile(string $rootPackagePath): string|false
+    {
         $etcMakefilePath = $rootPackagePath . 'etc' . DIRECTORY_SEPARATOR . 'Makefile';
-        $etcMakefile     = is_file($etcMakefilePath) ? file_get_contents($etcMakefilePath) : false;
 
-        foreach ($matches[0] as $i => $fullLine) {
-            $targetName          = $matches[2][$i][0];
-            $targetHeaderPattern = '/^' . preg_quote($targetName, '/') . ':/m';
-            $hasTarget           = is_string($etcMakefile) && preg_match($targetHeaderPattern, $etcMakefile) === 1;
-
-            $makefileContents = str_replace(
-                $fullLine[0],
-                $matches[1][$i][0] . '=' . ($hasTarget ? $matches[3][$i][0] : $matches[4][$i][0]),
-                $makefileContents,
-            );
+        if (! is_file($etcMakefilePath)) {
+            return false;
         }
 
-        return $makefileContents;
+        return file_get_contents($etcMakefilePath);
+    }
+
+    private static function etcMakefileDefinesTarget(string $etcMakefile, string $targetName): bool
+    {
+        $targetHeaderPattern = self::targetHeaderPattern($targetName);
+
+        return array_any(
+            explode("\n", self::normalizeLineEndings($etcMakefile)),
+            static fn (string $line): bool => preg_match($targetHeaderPattern, $line) === 1,
+        );
+    }
+
+    private static function targetHeaderPattern(string $targetName): string
+    {
+        return '/^' . preg_quote($targetName, '/') . ':/';
+    }
+
+    private static function normalizeLineEndings(string $contents): string
+    {
+        return str_replace(["\r\n", "\r"], "\n", $contents);
     }
 }

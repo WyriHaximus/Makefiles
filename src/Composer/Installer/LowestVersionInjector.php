@@ -20,6 +20,8 @@ use const PREG_OFFSET_CAPTURE;
 
 final class LowestVersionInjector
 {
+    private const int VERSION_PARTS_LIMIT = 3;
+
     private function __construct()
     {
     }
@@ -34,10 +36,14 @@ final class LowestVersionInjector
         );
 
         foreach ($matchesThirdPass[0] as $i => $fullLine) {
-            $filePath     = $rootPackagePath . $matchesThirdPass[2][$i][0];
-            $fileContents = is_file($filePath) ? file_get_contents($filePath) : false;
-            $json         = is_string($fileContents) ? json_decode($fileContents, true) : null;
-            $version      = self::cleanVersionToMajorMinor(self::getValueFromTree(
+            $filePath = $rootPackagePath . $matchesThirdPass[2][$i][0];
+            $json     = null;
+            if (is_file($filePath)) {
+                $fileContents = file_get_contents($filePath);
+                $json         = is_string($fileContents) ? json_decode($fileContents, true) : null;
+            }
+
+            $version = self::cleanVersionToMajorMinor(self::getValueFromTree(
                 is_array($json) ? $json : [],
                 explode('.', $matchesThirdPass[3][$i][0]),
             ));
@@ -76,7 +82,7 @@ final class LowestVersionInjector
 
     private static function cleanVersionToMajorMinor(string $version): string
     {
-        $parts = explode('.', $version, 3);
+        $parts = explode('.', $version, self::VERSION_PARTS_LIMIT);
         $major = $parts[0];
         $minor = $parts[1] ?? '0';
 

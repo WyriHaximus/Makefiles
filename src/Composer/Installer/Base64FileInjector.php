@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
-use function array_keys;
-use function array_values;
 use function assert;
 use function base64_encode;
 use function basename;
@@ -43,6 +41,10 @@ final class Base64FileInjector
             $base64FileContents['base64(' . basename($file) . ')'] = base64_encode($fileContents);
         }
 
-        return str_replace(array_keys($base64FileContents), array_values($base64FileContents), $makefileContents);
+        foreach ($base64FileContents as $search => $replace) {
+            $makefileContents = str_replace($search, $replace, $makefileContents);
+        }
+
+        return $makefileContents;
     }
 }

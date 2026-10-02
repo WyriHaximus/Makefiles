@@ -175,6 +175,18 @@ final class ProjectSandbox
         return self::$canCreateSymlinks;
     }
 
+    public static function createBrokenSymlink(string $linkPath): void
+    {
+        $temporaryTarget = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('wh-broken-symlink-', true);
+        file_put_contents($temporaryTarget, '');
+
+        if (! symlink($temporaryTarget, $linkPath)) {
+            throw new RuntimeException('Failed to create broken symlink for test setup.');
+        }
+
+        unlink($temporaryTarget);
+    }
+
     public static function packageSourceRoot(): string
     {
         return dirname(__DIR__, 4);

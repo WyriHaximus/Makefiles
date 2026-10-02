@@ -6,6 +6,7 @@ namespace WyriHaximus\Tests\Makefiles\Composer\Installer;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionClass;
 use WyriHaximus\Makefiles\Composer\Installer\FigletFont;
 use WyriHaximus\Tests\Makefiles\TestCase;
 
@@ -14,6 +15,26 @@ final class FigletFontTest extends TestCase
     /** @return iterable<string, array{string, list<string>}> */
     public static function provideRenderCases(): iterable
     {
+        yield 'empty string' => [
+            '',
+            [
+                '',
+                '',
+                '',
+                '',
+            ],
+        ];
+
+        yield 'single character omits trailing space padding' => [
+            'a',
+            [
+                '',
+                '  _.',
+                ' (_|',
+                '',
+            ],
+        ];
+
         yield 'single word' => [
             'test',
             [
@@ -63,6 +84,55 @@ final class FigletFontTest extends TestCase
                 '',
             ],
         ];
+
+        yield 'narrow glyphs with inter character spacing' => [
+            'il',
+            [
+                '',
+                ' o   |',
+                ' |   |',
+                '',
+            ],
+        ];
+
+        yield 'repeated narrow glyphs omit trailing space padding' => [
+            'ii',
+            [
+                '',
+                ' o   o',
+                ' |   |',
+                '',
+            ],
+        ];
+
+        yield 'adjacent glyphs insert single space between rows' => [
+            'ab',
+            [
+                '',
+                '  _.   |_',
+                ' (_|   |_)',
+                '',
+            ],
+        ];
+
+        yield 'mixed wide glyphs preserve row width and spacing' => [
+            '@W',
+            [
+                '   __',
+                '  /  \\   \\    /',
+                ' | (|/    \\/\\/',
+                '  \\__',
+            ],
+        ];
+    }
+
+    #[Test]
+    public function constructorIsPrivate(): void
+    {
+        $reflection  = new ReflectionClass(FigletFont::class);
+        $constructor = $reflection->getConstructor();
+        self::assertNotNull($constructor);
+        self::assertTrue($constructor->isPrivate());
     }
 
     /** @param list<string> $expectedLines */

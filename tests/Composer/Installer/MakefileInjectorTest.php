@@ -6,6 +6,8 @@ namespace WyriHaximus\Tests\Makefiles\Composer\Installer;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionClass;
+use ReflectionMethod;
 use WyriHaximus\Makefiles\Composer\Installer\Base64FileInjector;
 use WyriHaximus\Makefiles\Composer\Installer\HelpInjector;
 use WyriHaximus\Makefiles\Composer\Installer\LowestVersionInjector;
@@ -58,6 +60,12 @@ final class MakefileInjectorTest extends TestCase
             ['php'],
             'NEEDS_DOCKER_SOCKET=FALSE',
         ];
+
+        yield 'integer keyed json list' => [
+            'NEEDS_DOCKER_SOCKET=when_in_requirements([1,"testcontainers/testcontainers"], TRUE, FALSE)',
+            ['testcontainers/testcontainers'],
+            'NEEDS_DOCKER_SOCKET=TRUE',
+        ];
     }
 
     /** @return iterable<string, array{string, array<string, bool>, string}> */
@@ -92,12 +100,38 @@ final class MakefileInjectorTest extends TestCase
             array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
             'OPS enabled',
         ];
+
+        yield 'empty quoted whenTrue branch' => [
+            'OPS when_supported_feature("opentelemetry-instrumentation", "", -e OTEL)',
+            array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
+            'OPS ',
+        ];
+
+        yield 'trim and quoted whenTrue preserves inner spaces' => [
+            'OPS when_supported_feature("opentelemetry-instrumentation", "  inner  ", disabled)',
+            array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
+            'OPS   inner  ',
+        ];
+
+        yield 'whenFalse branch trims whitespace' => [
+            'OPS when_supported_feature("unknown-feature", enabled,   disabled   )',
+            SupportedFeatures::DEFAULTS,
+            'OPS disabled',
+        ];
+
+        yield 'quoted empty whenFalse branch' => [
+            'OPS when_supported_feature("unknown-feature", enabled, "")',
+            SupportedFeatures::DEFAULTS,
+            'OPS ',
+        ];
     }
 
     /** @return iterable<string, array{bool, string, string}> */
     public static function provideLowestVersionCases(): iterable
     {
         yield 'major minor from json tree' => [true, '{"config":{"platform":{"php":"8.4.13"}}}', 'PHP_VERSION="8.4"'];
+        yield 'four part version string' => [true, '{"config":{"platform":{"php":"1.2.3.4"}}}', 'PHP_VERSION="1.2"'];
+        yield 'five part version string' => [true, '{"config":{"platform":{"php":"8.4.13.99"}}}', 'PHP_VERSION="8.4"'];
         yield 'missing file' => [false, '', 'PHP_VERSION="0.0"'];
         yield 'missing tree segment' => [true, '{"config":{}}', 'PHP_VERSION="0.0"'];
         yield 'numeric leaf value' => [true, '{"config":{"platform":{"php":80413}}}', 'PHP_VERSION="80413.0"'];
@@ -186,6 +220,21 @@ MAKEFILE,
         yield 'ext-pcntl' => [
             [],
             new Requirements([], ['ext-pcntl']),
+            array_merge(SupportedFeatures::DEFAULTS, [
+                SupportedFeatures::FEATURE_MACOS => false,
+                SupportedFeatures::FEATURE_WINDOWS => false,
+            ]),
+        ];
+
+        yield 'php requirement without ext-pcntl keeps defaults' => [
+            [],
+            new Requirements([], ['php']),
+            SupportedFeatures::DEFAULTS,
+        ];
+
+        yield 'ext-pcntl with other packages' => [
+            [],
+            new Requirements([], ['php', 'ext-pcntl']),
             array_merge(SupportedFeatures::DEFAULTS, [
                 SupportedFeatures::FEATURE_MACOS => false,
                 SupportedFeatures::FEATURE_WINDOWS => false,
@@ -330,6 +379,33 @@ MAKEFILE,
         ];
     }
 
+    /** @return iterable<string, array{string, string}> */
+    public static function provideSupportedFeatureNormalizeValueCases(): iterable
+    {
+        yield 'empty quoted literal' => ['""', ''];
+        yield 'single quoted character' => ['"x"', 'x'];
+        yield 'quoted two character inner' => ['"ab"', 'ab'];
+        yield 'unquoted passthrough' => ['plain', 'plain'];
+        yield 'single character without quotes' => ['x', 'x'];
+        yield 'trim surrounding whitespace' => ['  spaced  ', 'spaced'];
+    }
+
+    #[Test]
+    #[DataProvider('provideSupportedFeatureNormalizeValueCases')]
+    public function supportedFeatureConditionalNormalizeValue(string $input, string $expected): void
+    {
+        $method = new ReflectionMethod(SupportedFeatureConditionalInjector::class, 'normalizeValue');
+        self::assertSame($expected, $method->invoke(null, $input));
+    }
+
+    #[Test]
+    public function supportedFeatureValueTooShortForQuoteStrippingUsesStrictLessThanTwo(): void
+    {
+        $method = new ReflectionMethod(SupportedFeatureConditionalInjector::class, 'valueTooShortForQuoteStripping');
+        self::assertTrue($method->invoke(null, 'x'));
+        self::assertFalse($method->invoke(null, '""'));
+    }
+
     /** @param list<string> $requirements */
     #[Test]
     #[DataProvider('provideRequirementConditionalCases')]
@@ -344,6 +420,27 @@ MAKEFILE,
     public function supportedFeatureConditionalInject(string $template, array $supportedFeatures, string $expected): void
     {
         self::assertSame($expected, SupportedFeatureConditionalInjector::inject($template, $supportedFeatures));
+    }
+
+    #[Test]
+    public function getValueFromTreeReturnsZeroForNonScalarLeaf(): void
+    {
+        $method = new ReflectionMethod(LowestVersionInjector::class, 'getValueFromTree');
+        self::assertSame(
+            '0',
+            $method->invoke(null, ['config' => ['platform' => ['php' => []]]], ['config', 'platform', 'php']),
+        );
+    }
+
+    #[Test]
+    public function cleanVersionToMajorMinorKeepsMajorAndMinorOnly(): void
+    {
+        self::assertSame(3, new ReflectionClass(LowestVersionInjector::class)->getConstant('VERSION_PARTS_LIMIT'));
+
+        $method = new ReflectionMethod(LowestVersionInjector::class, 'cleanVersionToMajorMinor');
+        self::assertSame('8.4', $method->invoke(null, '8.4.13'));
+        self::assertSame('1.2', $method->invoke(null, '1.2.3.4.5'));
+        self::assertSame('1.0', $method->invoke(null, '1'));
     }
 
     #[Test]
@@ -402,6 +499,38 @@ MAKEFILE,
     }
 
     #[Test]
+    public function base64InjectReplacesMultiplePlaceholdersWithExactOutput(): void
+    {
+        $license = file_get_contents(dirname(__DIR__, 3) . '/etc/base64/LICENSE');
+        $phpcs   = file_get_contents(dirname(__DIR__, 3) . '/etc/base64/phpcs.xml');
+        self::assertIsString($license);
+        self::assertIsString($phpcs);
+
+        $input    = 'a base64(LICENSE) b base64(phpcs.xml) c';
+        $expected = 'a ' . base64_encode($license) . ' b ' . base64_encode($phpcs) . ' c';
+
+        self::assertSame($expected, Base64FileInjector::inject($input));
+    }
+
+    #[Test]
+    public function base64InjectReplacesMultiplePlaceholdersInOrder(): void
+    {
+        $base64Dir = dirname(__DIR__, 3) . '/etc/base64/';
+        $license   = file_get_contents($base64Dir . 'LICENSE');
+        self::assertIsString($license);
+        $input    = 'start base64(LICENSE) middle base64(AGENTS-md) end';
+        $agentsMd = file_get_contents($base64Dir . 'AGENTS-md');
+        self::assertIsString($agentsMd);
+        $expected = 'start '
+            . base64_encode($license)
+            . ' middle '
+            . base64_encode($agentsMd)
+            . ' end';
+
+        self::assertSame($expected, Base64FileInjector::inject($input));
+    }
+
+    #[Test]
     public function base64InjectSkipsNonFileEntries(): void
     {
         $base64Dir = dirname(__DIR__, 3) . '/etc/base64/';
@@ -449,16 +578,15 @@ MAKEFILE,
     {
         $features                                 = SupportedFeatures::DEFAULTS;
         $features[SupportedFeatures::FEATURE_ZTS] = false;
-        $result                                   = SupportedFeaturesInjector::inject(
-            "supported-features(list)\nsupported-features(raw)",
-            $features,
-        );
 
-        self::assertStringContainsString('@echo "', $result);
-        self::assertStringNotContainsString('supported-features(list)', $result);
-        self::assertStringNotContainsString('"zts"', $result);
-        self::assertStringContainsString('"unit-tests"', $result);
-        self::assertStringNotContainsString('supported-features(raw)', $result);
+        self::assertSame(
+            '@echo "[\"code-style\",\"composer-dependency-checkers\",\"linux\",\"macos\",\"static-analysis\",\"unit-tests\",\"windows\"]" ## Count: 7' . "\n"
+            . '["code-style","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"]',
+            SupportedFeaturesInjector::inject(
+                "supported-features(list)\nsupported-features(raw)",
+                $features,
+            ),
+        );
     }
 
     /**

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
-use function array_filter;
 use function array_intersect;
-use function array_values;
 use function count;
 use function is_array;
 use function is_string;
@@ -34,7 +32,16 @@ final class RequirementConditionalInjector
 
         foreach ($matchesSecondPass[0] as $i => $fullLine) {
             $requiredPackagesJson = json_decode($matchesSecondPass[3][$i][0], true);
-            $requiredPackages     = is_array($requiredPackagesJson) ? array_values(array_filter($requiredPackagesJson, is_string(...))) : [];
+            $requiredPackages     = [];
+            if (is_array($requiredPackagesJson)) {
+                foreach ($requiredPackagesJson as $package) {
+                    if (! is_string($package)) {
+                        continue;
+                    }
+
+                    $requiredPackages[] = $package;
+                }
+            }
 
             $makefileContents = str_replace(
                 $fullLine[0],

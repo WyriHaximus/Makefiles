@@ -7,6 +7,7 @@ namespace WyriHaximus\Makefiles\Composer\Installer;
 use RuntimeException;
 
 use function array_any;
+use function array_fill_keys;
 use function array_key_exists;
 use function array_keys;
 use function array_map;
@@ -18,7 +19,6 @@ use function ltrim;
 use function preg_match;
 use function preg_match_all;
 use function preg_quote;
-use function preg_replace;
 use function str_contains;
 use function str_replace;
 use function str_starts_with;
@@ -31,6 +31,9 @@ use const PREG_OFFSET_CAPTURE;
 
 final class DirectDockerDetector
 {
+    /** @var list<string> */
+    private static array $emptyRecipeLinesFromMissingRemainder = [];
+
     private const array DOCKER_FRAMEWORK_VARIABLES = [
         'DOCKER_RUN',
         'DOCKER_RUN_WITHOUT_NETWORK_FOR_COMPOSER',
@@ -83,15 +86,18 @@ final class DirectDockerDetector
             return $makefileContents;
         }
 
-        foreach (['ALL_HAS_DIRECT_DOCKER_TASKS', 'CONTRIB_HAS_DIRECT_DOCKER_TASKS'] as $flag) {
-            $makefileContents = preg_replace(
-                '/^' . preg_quote($flag, '/') . '=FALSE$/m',
-                $flag . '=TRUE',
-                $makefileContents,
-            ) ?? $makefileContents;
+        $lines = explode("\n", $makefileContents);
+        foreach ($lines as $index => $line) {
+            foreach (['ALL_HAS_DIRECT_DOCKER_TASKS', 'CONTRIB_HAS_DIRECT_DOCKER_TASKS'] as $flag) {
+                if ($line !== $flag . '=FALSE') {
+                    continue;
+                }
+
+                $lines[$index] = $flag . '=TRUE';
+            }
         }
 
-        return $makefileContents;
+        return implode("\n", $lines);
     }
 
     public static function targetUsesDocker(string $makefileContents, string $target): bool
@@ -185,7 +191,8 @@ final class DirectDockerDetector
     /** @return array<string, true> */
     private static function extractDockerWrapperVariables(string $makefileContents): array
     {
-        $variables = [];
+        /** @var list<string> $variableNames */
+        $variableNames = [];
         preg_match_all(
             '/^([A-Z_][A-Z0-9_]*)(?:[:?+]?=)(.+)$/m',
             $makefileContents,
@@ -201,10 +208,10 @@ final class DirectDockerDetector
                 continue;
             }
 
-            $variables[$name] = true;
+            $variableNames[] = $name;
         }
 
-        return $variables;
+        return array_fill_keys($variableNames, true);
     }
 
     /** @param array<string, true> $dockerWrapperVariables */
@@ -223,15 +230,48 @@ final class DirectDockerDetector
             return null;
         }
 
-        $offset = $match[0][1] + strlen($match[0][0]);
-        if ($offset < strlen($makefileContents) && $makefileContents[$offset] === "\n") {
-            ++$offset;
+        $offset = self::recipeContentOffsetAfterTargetHeader($makefileContents, $match[0][1] + strlen($match[0][0]));
+
+        return self::formatTargetRecipe(self::parseRecipeLinesFromRemainder(substr($makefileContents, $offset)));
+    }
+
+    /** @param list<string> $recipeLines */
+    private static function formatTargetRecipe(array $recipeLines): string
+    {
+        if ($recipeLines === []) {
+            return self::emptyFormattedTargetRecipe();
         }
 
-        $rest = substr($makefileContents, $offset);
+        return implode("\n", $recipeLines) . "\n";
+    }
 
+    private static function emptyFormattedTargetRecipe(): string
+    {
+        return '';
+    }
+
+    private static function isTargetRecipeLine(string $line): bool
+    {
+        return str_starts_with($line, "\t")
+            || str_starts_with($line, 'ifeq')
+            || str_starts_with($line, 'else')
+            || str_starts_with($line, 'endif');
+    }
+
+    private static function recipeContentOffsetAfterTargetHeader(string $makefileContents, int $headerEndOffset): int
+    {
+        if ($headerEndOffset < strlen($makefileContents) && $makefileContents[$headerEndOffset] === "\n") {
+            return $headerEndOffset + 1;
+        }
+
+        return $headerEndOffset;
+    }
+
+    /** @return list<string> */
+    private static function parseRecipeLinesFromRemainder(string $rest): array
+    {
         if ($rest === '') {
-            return '';
+            return self::$emptyRecipeLinesFromMissingRemainder;
         }
 
         $recipeLines = [];
@@ -254,18 +294,6 @@ final class DirectDockerDetector
             break;
         }
 
-        if ($recipeLines === []) {
-            return '';
-        }
-
-        return implode("\n", $recipeLines) . "\n";
-    }
-
-    private static function isTargetRecipeLine(string $line): bool
-    {
-        return str_starts_with($line, "\t")
-            || str_starts_with($line, 'ifeq')
-            || str_starts_with($line, 'else')
-            || str_starts_with($line, 'endif');
+        return $recipeLines;
     }
 }

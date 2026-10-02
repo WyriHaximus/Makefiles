@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
+use Composer\IO\IOInterface;
 use RuntimeException;
 
 use function assert;
@@ -18,7 +19,6 @@ use function rtrim;
 use function str_contains;
 use function strlen;
 use function uniqid;
-use function unlink;
 
 use const DIRECTORY_SEPARATOR;
 
@@ -43,7 +43,7 @@ final class MakefileGenerator
         $makefileContents = file_get_contents($templatePath);
         assert(is_string($makefileContents));
 
-        $context->io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
+        self::announceMakefileGeneration($context->io);
 
         $makefileContents = IncludeLoader::load($context, $makefileContents);
         $makefileContents = ExtraServicesInjector::inject($makefileContents, $context->rootPackagePath);
@@ -63,16 +63,18 @@ final class MakefileGenerator
 
     private static function writeMakefile(string $path, string $contents): void
     {
-        $directory     = dirname($path);
-        $temporaryPath = $directory . DIRECTORY_SEPARATOR . '.Makefile.' . uniqid('', true) . '.tmp';
+        $temporaryPath = self::temporaryMakefilePath($path);
         $written       = file_put_contents($temporaryPath, $contents);
         assert($written === strlen($contents));
 
-        if (is_file($path)) {
-            unlink($path);
-        }
-
         assert(rename($temporaryPath, $path));
+    }
+
+    private static function temporaryMakefilePath(string $makefilePath): string
+    {
+        $directory = dirname($makefilePath);
+
+        return $directory . DIRECTORY_SEPARATOR . '.Makefile.' . uniqid('', true) . '.tmp';
     }
 
     private static function makefilePath(string $rootPackagePath): string
@@ -81,11 +83,12 @@ final class MakefileGenerator
             throw new RuntimeException('Refusing to write Makefile to an unsafe root package path.');
         }
 
-        $separator = match (true) {
-            str_contains($rootPackagePath, '\\') => '\\',
-            str_contains($rootPackagePath, '/') => '/',
-            default => DIRECTORY_SEPARATOR,
-        };
+        $separator = '/';
+        if (str_contains($rootPackagePath, '\\')) {
+            $separator = '\\';
+        } elseif (self::pathUsesWindowsDriveLetter($rootPackagePath)) {
+            $separator = '\\';
+        }
 
         return rtrim($rootPackagePath, '/\\') . $separator . 'Makefile';
     }
@@ -96,10 +99,20 @@ final class MakefileGenerator
             return false;
         }
 
-        if ($path[0] === '/' || $path[0] === DIRECTORY_SEPARATOR) {
+        if ($path[0] === '/' || $path[0] === '\\') {
             return true;
         }
 
+        return self::pathUsesWindowsDriveLetter($path);
+    }
+
+    private static function pathUsesWindowsDriveLetter(string $path): bool
+    {
         return strlen($path) >= 2 && $path[1] === ':';
+    }
+
+    private static function announceMakefileGeneration(IOInterface $io): void
+    {
+        $io->write('<info>wyrihaximus/makefiles:</info> Generating Makefile');
     }
 }
