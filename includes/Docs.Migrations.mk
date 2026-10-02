@@ -28,8 +28,8 @@ migrations-docs-create-documentation-markdownlint-config-if-not-exists: #### Cre
 migrations-docs-create-lychee-config-if-not-exists: #### Create `etc/qa/lychee.toml` when missing ##*I*##
 	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/lychee.toml"; if (file_exists($$configFile)) {exit;} if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(lychee.toml)"));' || true)
 
-migrations-docs-create-cspell-config-if-not-exists: #### Create `etc/qa/cspell.json` when missing ##*I*##
-	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/cspell.json"; if (file_exists($$configFile)) {exit;} if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(cspell.json)"));' || true)
+migrations-docs-enforce-cspell-config-contents: #### Enforce `etc/qa/cspell.json` contents ##*I*##
+	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/cspell.json"; if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(cspell.json)"));' || true)
 
 migrations-docs-enforce-vale-config-contents: #### Enforce `etc/qa/vale.ini` contents ##*I*##
 	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/vale.ini"; if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(vale.ini)"));' || true)
