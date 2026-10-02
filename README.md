@@ -79,6 +79,17 @@ Many targets honor **supported features** (described under [Configuration](#conf
 
 `documentation-qa` runs markdown structure lint ([markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2)), link checking ([lychee](https://github.com/lycheeverse/lychee)), spelling ([cspell](https://cspell.org/)), and prose lint ([Vale](https://vale.sh/)) against project docs.
 
+Shared project terms live in `etc/wordlist.txt` and are copied into enforced templates via `make documentation-wordlist-sync` ([`WordlistDocumentationConfigSync::sync()`](src/Documentation/WordlistDocumentationConfigSync.php)). On each Composer install or update, [`WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols()`](src/Documentation/WordlistDocumentationConfigSync.php) (migration `migrations-docs-enrich-qa-wordlists-with-php-symbols`) merges loaded PHP symbol names into `etc/qa/cspell.json` and `etc/qa/vale-vocab.txt`. The class exposes only those two helpers plus [`addWordsToQaWordlists()`](src/Documentation/WordlistDocumentationConfigSync.php) for custom terms; everything else is internal.
+
+Packages and applications that ship their own product names, acronyms, or API tokens in documentation can register those spellings with an install migration in `etc/Makefile`. Call [`WordlistDocumentationConfigSync::addWordsToQaWordlists()`](src/Documentation/WordlistDocumentationConfigSync.php) with only the extra strings (variadic). The helper merges into both QA wordlists, drops duplicates and blanks, and keeps entries sorted, so the migration stays idempotent:
+
+```makefile
+migrations-docs-add-my-package-wordlist: #### Register package-specific documentation spellings ##*I*##
+    ($(DOCKER_RUN) php -r '$$autoload = getcwd() . "/vendor/autoload.php"; if (!is_file($$autoload)) {exit;} require $$autoload; \WyriHaximus\Makefiles\Documentation\WordlistDocumentationConfigSync::addWordsToQaWordlists(getcwd(), "AcmeWidget", "subprocess");' || true)
+```
+
+Use a tab before the recipe line in your real `etc/Makefile` (spaces above are for markdown lint only). Tag the target with `##*I*##` so it runs with other install migrations, then run `make install` in the consuming repository to regenerate the root `Makefile`.
+
 ### Container access ([`includes/ContainerAccess.mk`](includes/ContainerAccess.mk))
 
 `run` and `shell` targets execute commands in the selected PHP image, with volume mounts for the workspace, Composer cache, optional Docker socket access for [Testcontainers](https://testcontainers.com/) when required, and sensible defaults for CI versus interactive TTY use.

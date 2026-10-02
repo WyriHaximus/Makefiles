@@ -1,2 +1,2 @@
-documentation-wordlist-sync: #### Sync etc/base64 cspell and vale vocab from etc/wordlist.txt ####
-	$(DOCKER_RUN) php etc/cli/sync-documentation-wordlist-from-wordlist.php
+documentation-wordlist-sync: #### Sync etc/base64 cspell and vale vocab from etc/wordlist.txt ##*IE*##
+	$(DOCKER_RUN) php -r 'require getcwd() . "/vendor/autoload.php"; \WyriHaximus\Makefiles\Documentation\WordlistDocumentationConfigSync::sync(getcwd());'

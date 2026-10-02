@@ -37,5 +37,8 @@ migrations-docs-enforce-vale-config-contents: #### Enforce `etc/qa/vale.ini` con
 migrations-docs-enforce-vale-vocab-contents: #### Enforce `etc/qa/vale-vocab.txt` contents ##*I*##
 	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/vale-vocab.txt"; if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(vale-vocab.txt)"));' || true)
 
+migrations-docs-enrich-qa-wordlists-with-php-symbols: #### Merge PHP symbol names into etc/qa documentation wordlists ##*I*##
+	($(DOCKER_RUN) php -r '$$autoload = getcwd() . "/vendor/autoload.php"; if (!is_file($$autoload)) {exit;} require $$autoload; \WyriHaximus\Makefiles\Documentation\WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols(getcwd());' || true)
+
 migrations-docs-create-vale-vocab-symlink-if-not-exists: #### Create WyriHaximus Vale vocab symlink when missing ##*I*##
 	($(DOCKER_RUN) php -r '$$link = "etc/qa/vale/styles/config/vocabularies/WyriHaximus/accept.txt"; if (is_link($$link)) {exit;} if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} if (!is_dir(dirname($$link))) {mkdir(dirname($$link), 0777, true);} symlink("../../../../../vale-vocab.txt", $$link);' || true)
