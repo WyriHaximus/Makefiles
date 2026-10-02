@@ -34,8 +34,8 @@ migrations-docs-enforce-cspell-config-contents: #### Enforce `etc/qa/cspell.json
 migrations-docs-enforce-vale-config-contents: #### Enforce `etc/qa/vale.ini` contents ##*I*##
 	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/vale.ini"; if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(vale.ini)"));' || true)
 
-migrations-docs-create-vale-vocab-if-not-exists: #### Create `etc/qa/vale-vocab.txt` when missing ##*I*##
-	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/vale-vocab.txt"; if (file_exists($$configFile)) {exit;} if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(vale-vocab.txt)"));' || true)
+migrations-docs-enforce-vale-vocab-contents: #### Enforce `etc/qa/vale-vocab.txt` contents ##*I*##
+	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/vale-vocab.txt"; if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(vale-vocab.txt)"));' || true)
 
 migrations-docs-create-vale-vocab-symlink-if-not-exists: #### Create WyriHaximus Vale vocab symlink when missing ##*I*##
 	($(DOCKER_RUN) php -r '$$link = "etc/qa/vale/styles/config/vocabularies/WyriHaximus/accept.txt"; if (is_link($$link)) {exit;} if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} if (!is_dir(dirname($$link))) {mkdir(dirname($$link), 0777, true);} symlink("../../../../../vale-vocab.txt", $$link);' || true)
