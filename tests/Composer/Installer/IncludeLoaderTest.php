@@ -19,6 +19,7 @@ use function in_array;
 use function ini_get;
 use function ini_set;
 use function mkdir;
+use function preg_last_error_msg;
 use function str_contains;
 use function str_replace;
 use function symlink;
@@ -34,13 +35,13 @@ final class IncludeLoaderTest extends TestCase
         ini_set('pcre.backtrack_limit', '0');
 
         try {
-            $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessageIsOrContains('Failed load in includes:');
-
             IncludeLoader::load(
                 ProjectSandbox::context($this->getTmpDir(), $this->getTmpDir() . 'reference/'),
                 'include includes/All.mk',
             );
+            self::fail('Expected RuntimeException was not thrown.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('Failed load in includes: ' . preg_last_error_msg(), $exception->getMessage());
         } finally {
             ini_set('pcre.backtrack_limit', (string) $previousBacktrackLimit);
         }
