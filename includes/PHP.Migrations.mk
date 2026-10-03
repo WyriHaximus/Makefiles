@@ -73,6 +73,9 @@ migrations-php-infection-ensure-log-per-mutator-has-the-correct-path: #### Ensur
 migrations-php-add-github-true-to-for-infection: #### Ensure we configure infection to emit logs to GitHub in `etc/qa/infection.json5` ##*I*##
 	($(DOCKER_RUN) php -r '$$infectionFile = "etc/qa/infection.json5"; if (!file_exists($$infectionFile)) {exit;} $$json = json_decode(file_get_contents($$infectionFile), true); if (!is_array($$json)) {exit;}  if (!array_key_exists("logs", $$json)) {exit;} if (array_key_exists("github", $$json["logs"])) {exit;} $$json["logs"]["github"] = true; file_put_contents($$infectionFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
 
+migrations-php-infection-add-threads-64-to-config: #### Ensure `threads` is set to `64` in `etc/qa/infection.json5` ##*I*##
+	($(DOCKER_RUN) php -r '$$infectionFile = "etc/qa/infection.json5"; if (!file_exists($$infectionFile)) {exit;} $$json = json_decode(file_get_contents($$infectionFile), true); if (!is_array($$json)) {exit;} if (array_key_exists("threads", $$json)) {exit;} $$json["threads"] = 64; file_put_contents($$infectionFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
+
 migrations-php-make-paths-compatible-with-infection-0-32: #### We update path to be relative to `etc/qa/infection.json5` as of 0.32 ##*I*##
 	($(DOCKER_RUN) php -r '$$infectionFile = "etc/qa/infection.json5"; if (!file_exists($$infectionFile)) {exit;} $$json = json_decode(file_get_contents($$infectionFile), true); if (!is_array($$json)) {exit;}  if (!array_key_exists("source", $$json)) {exit;} if (!array_key_exists("directories", $$json["source"])) {exit;} foreach ($$json["source"]["directories"] as $$key => $$value) { if (!str_starts_with($$value, "../../")) {$$json["source"]["directories"][$$key] = "../../" . $$value;} } file_put_contents($$infectionFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\r\n");' || true)
 
