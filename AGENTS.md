@@ -1,6 +1,8 @@
 # Instruction Economy (check before EVERY instruction you add)
 
-Before adding an instruction ANYWHERE — AGENTS.mds, rules, agents, skills, hooks, configs: prefer the NATIVE mechanism (frontmatter field, config key, existing rule, a router to the single source) over new prose, and prefer DELETING prose over adding it. Every added instruction is a contradiction-and-drift surface; condensed copies of another artifact's content drift silently. Success metric: the diff shrinks or holds while capability grows. Consistency beats token thrift.
+Before adding an instruction ANYWHERE (AGENTS.mds, rules, agents, skills, hooks, configs): prefer the NATIVE mechanism (frontmatter field, config key, existing rule, a router to the single source) over new prose, and prefer DELETING prose over adding it. Every added instruction is a contradiction-and-drift surface; condensed copies of another artifact's content drift silently. Success metric: the diff shrinks or holds while capability grows. Consistency beats token thrift.
+
+Before doing anything read this file to ensure you are up to date with it.
 
 # Project Instructions
 
@@ -62,10 +64,10 @@ Before adding an instruction ANYWHERE — AGENTS.mds, rules, agents, skills, hoo
 - Always extend PHPUnit test classes from `WyriHaximus\AsyncTestUtilities\AsyncTestCase` or `WyriHaximus\TestUtilities\TestCase`.
 
 ## Packages to consider when working with logging
-- [`wyrihaximus/psr-3-context-logger`](https://github.com/WyriHaximus/php-psr-3-context-logger) — PSR-3 decorator; merge default context (optional `[Prefix]`) into every log call
-- [`wyrihaximus/psr-3-filter`](https://github.com/WyriHaximus/php-psr-3-filter) — PSR-3 filter decorators; pass or drop logs by context path, level, message keyword, or strip nested `[Prefix]` chains (pairs with context-logger)
-- [`wyrihaximus/psr-3-callable-throwable-logger`](https://github.com/WyriHaximus/php-psr-3-callable-throwable-logger) — `CallableThrowableLogger::create()` for react/promise rejection handlers and RxPHP error callbacks
-- [`wyrihaximus/monolog-processors`](https://github.com/WyriHaximus/php-monolog-processors) — Monolog record processors (`CopyProcessor`, `ExceptionClassProcessor`, `TraceProcessor`, `RuntimeProcessor`, …)
+- [`wyrihaximus/psr-3-context-logger`](https://github.com/WyriHaximus/php-psr-3-context-logger): PSR-3 decorator; merge default context (optional `[Prefix]`) into every log call
+- [`wyrihaximus/psr-3-filter`](https://github.com/WyriHaximus/php-psr-3-filter): PSR-3 filter decorators; pass or drop logs by context path, level, message keyword, or strip nested `[Prefix]` chains (pairs with context-logger)
+- [`wyrihaximus/psr-3-callable-throwable-logger`](https://github.com/WyriHaximus/php-psr-3-callable-throwable-logger): `CallableThrowableLogger::create()` for react/promise rejection handlers and RxPHP error callbacks
+- [`wyrihaximus/monolog-processors`](https://github.com/WyriHaximus/php-monolog-processors): Monolog record processors (`CopyProcessor`, `ExceptionClassProcessor`, `TraceProcessor`, `RuntimeProcessor`, …)
 
 ## Forbidden commands
 - Never call, attempt or even consider to use `sudo`
@@ -73,6 +75,8 @@ Before adding an instruction ANYWHERE — AGENTS.mds, rules, agents, skills, hoo
 - Never call, attempt or even consider to use `sudo su`
 - Never call, attempt or even consider to use `cd`
 - Never call, attempt or even consider to use `docker`
+- Never call, attempt or even consider to use `git commit`
+- Never call, attempt or even consider to use `git push`
 - Any command not in the allowed commands list
 - Never, ever, ever use ` — ` in documentation!!!!!
 
