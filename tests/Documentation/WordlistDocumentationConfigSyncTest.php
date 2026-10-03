@@ -14,11 +14,14 @@ use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
 use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function chmod;
+use function define;
+use function explode;
 use function file_get_contents;
 use function file_put_contents;
 use function json_decode;
 use function mkdir;
 use function rtrim;
+use function trim;
 use function unlink;
 
 use const DIRECTORY_SEPARATOR;
@@ -46,13 +49,13 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
     public function syncUpdatesValeVocabAndCspellFromWordlist(): void
     {
         $root = $this->createProjectTree(
-            "alpha\n\nbeta\nalpha\n",
+            "alpha\n\nbeta\nalpha\n one\n\none\ntwo \n",
             '{"version":"0.2","language":"en","words":["old"]}',
         );
 
         WordlistDocumentationConfigSync::sync($root);
 
-        self::assertSame("alpha\nbeta\n", file_get_contents($root . 'etc/base64/vale-vocab.txt'));
+        self::assertSame("alpha\nbeta\none\ntwo\n", file_get_contents($root . 'etc/base64/vale-vocab.txt'));
 
         $cspellPath    = $root . 'etc/base64/cspell.json';
         $cspellEncoded = (string) file_get_contents($cspellPath);
@@ -62,21 +65,20 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         $cspell = json_decode($cspellEncoded, true);
         self::assertIsArray($cspell);
         self::assertSame('0.2', $cspell['version']);
-        self::assertSame(['alpha', 'beta'], $cspell['words']);
+        self::assertSame(['alpha', 'beta', 'one', 'two'], $cspell['words']);
     }
 
     #[Test]
-    public function writeCspellWordsPreservesUnescapedSlashesInConfig(): void
+    public function syncPreservesUnescapedSlashesInExistingCspellConfig(): void
     {
-        $path = $this->getTmpDir() . 'cspell-slashes.json';
-        file_put_contents(
-            $path,
+        $root = $this->createProjectTree(
+            "term\n",
             '{"version":"0.2","ignorePaths":["https://example.com/foo/bar"],"words":["old"]}',
         );
 
-        WordlistDocumentationConfigSync::writeCspellWords($path, ['new']);
+        WordlistDocumentationConfigSync::sync($root);
 
-        $encoded = (string) file_get_contents($path);
+        $encoded = (string) file_get_contents($root . 'etc/base64/cspell.json');
         self::assertStringContainsString('https://example.com/foo/bar', $encoded);
         self::assertStringNotContainsString('https:\\/\\/example.com', $encoded);
     }
@@ -89,12 +91,109 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
     }
 
     #[Test]
-    public function readWordlistReturnsTrimmedUniqueWords(): void
+    public function enrichQaWordlistsWithPhpSymbolsMergesIntoCspellAndValeVocab(): void
     {
-        $path = $this->getTmpDir() . 'wordlist.txt';
-        file_put_contents($path, " one\n\none\ntwo \n");
+        $root = $this->getTmpDir() . 'enrich-qa-wordlists/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "manual\n");
 
-        self::assertSame(['one', 'two'], WordlistDocumentationConfigSync::readWordlist($path));
+        WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols($root);
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertIsArray($cspell['words']);
+        /** @var list<string> $cspellWords */
+        $cspellWords = $cspell['words'];
+        self::assertContains('manual', $cspellWords);
+        self::assertContains('WordlistDocumentationConfigSync', $cspellWords);
+
+        $vale = (string) file_get_contents($root . 'etc/qa/vale-vocab.txt');
+        self::assertStringContainsString("manual\n", $vale);
+        self::assertStringContainsString("WordlistDocumentationConfigSync\n", $vale);
+    }
+
+    #[Test]
+    public function enrichQaWordlistsWithPhpSymbolsUpdatesCspellWhenValeVocabIsMissing(): void
+    {
+        $root = $this->getTmpDir() . 'enrich-cspell-only/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual",1,"","manual"]}');
+
+        WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols($root);
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertIsArray($cspell['words']);
+        /** @var list<string> $cspellWords */
+        $cspellWords = $cspell['words'];
+        self::assertContains('manual', $cspellWords);
+        self::assertContains('WordlistDocumentationConfigSync', $cspellWords);
+    }
+
+    #[Test]
+    public function enrichQaWordlistsWithPhpSymbolsIncludesUserDefinedConstantSegments(): void
+    {
+        define('WyriHaximus\\Tests\\Makefiles\\Documentation\\COVERAGE_CONST', 1);
+
+        $root = $this->getTmpDir() . 'enrich-qa-const/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":[]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "\n");
+
+        WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols($root);
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertIsArray($cspell['words']);
+        /** @var list<string> $cspellWords */
+        $cspellWords = $cspell['words'];
+        self::assertContains('COVERAGE_CONST', $cspellWords);
+    }
+
+    #[Test]
+    public function addWordsToQaWordlistsMergesSortedIntoCspellAndValeVocab(): void
+    {
+        $root = $this->getTmpDir() . 'add-qa-words/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "manual\n");
+
+        WordlistDocumentationConfigSync::addWordsToQaWordlists($root, ' zebra', 'Acme', 'Acme', '');
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertSame(['Acme', 'manual', 'zebra'], $cspell['words']);
+
+        $valeLines = explode("\n", trim((string) file_get_contents($root . 'etc/qa/vale-vocab.txt')));
+        self::assertSame(['Acme', 'manual', 'zebra'], $valeLines);
+    }
+
+    #[Test]
+    public function addWordsToQaWordlistsIsNoOpWhenNoWordsArePassed(): void
+    {
+        $root = $this->getTmpDir() . 'add-qa-words-none/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "manual\n");
+
+        WordlistDocumentationConfigSync::addWordsToQaWordlists($root);
+
+        self::assertSame('{"words":["manual"]}', trim((string) file_get_contents($root . 'etc/qa/cspell.json')));
+    }
+
+    #[Test]
+    public function addWordsToQaWordlistsIsNoOpWhenEveryArgumentIsEmpty(): void
+    {
+        $root = $this->getTmpDir() . 'add-qa-words-empty/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "manual\n");
+
+        WordlistDocumentationConfigSync::addWordsToQaWordlists($root, '', '   ');
+
+        self::assertSame('{"words":["manual"]}', trim((string) file_get_contents($root . 'etc/qa/cspell.json')));
+        self::assertSame("manual\n", file_get_contents($root . 'etc/qa/vale-vocab.txt'));
     }
 
     #[Test]
@@ -114,7 +213,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         mkdir($directory);
         $path = $directory . 'vale-vocab.txt';
 
-        WordlistDocumentationConfigSync::writeValeVocab($path, ['word']);
+        $this->invokePrivateStatic('writeValeVocab', [$path, ['word']]);
 
         self::assertSame("word\n", file_get_contents($path));
     }
@@ -125,9 +224,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         $path = $this->getTmpDir() . 'missing-parent/vale-vocab.txt';
 
         $this->assertRuntimeExceptionContainsPath(
-            static function () use ($path): void {
-                WordlistDocumentationConfigSync::writeValeVocab($path, ['word']);
-            },
+            fn (): mixed => $this->invokePrivateStatic('writeValeVocab', [$path, ['word']]),
             $path,
             'Failed to write Vale vocabulary file',
         );
@@ -141,9 +238,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         $path = $parent . '/vale-vocab.txt';
 
         $this->assertRuntimeExceptionContainsPath(
-            static function () use ($path): void {
-                WordlistDocumentationConfigSync::writeValeVocab($path, ['word']);
-            },
+            fn (): mixed => $this->invokePrivateStatic('writeValeVocab', [$path, ['word']]),
             $path,
             'Failed to write Vale vocabulary file',
         );
@@ -156,9 +251,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         mkdir($directory);
 
         $this->assertRuntimeExceptionContainsPath(
-            static function () use ($directory): void {
-                WordlistDocumentationConfigSync::writeValeVocab($directory, ['word']);
-            },
+            fn (): mixed => $this->invokePrivateStatic('writeValeVocab', [$directory, ['word']]),
             $directory,
             'Failed to write Vale vocabulary file',
         );
@@ -170,7 +263,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         $path = $this->getTmpDir() . 'missing.txt';
 
         $this->assertRuntimeExceptionContainsPath(
-            static fn (): array => WordlistDocumentationConfigSync::readWordlist($path),
+            fn (): mixed => $this->invokePrivateStatic('readWordlist', [$path]),
             $path,
             'Wordlist file is missing',
         );
@@ -182,9 +275,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         $path = $this->getTmpDir() . 'missing.json';
 
         $this->assertRuntimeExceptionContainsPath(
-            static function () use ($path): void {
-                WordlistDocumentationConfigSync::writeCspellWords($path, ['word']);
-            },
+            fn (): mixed => $this->invokePrivateStatic('writeCspellWords', [$path, ['word']]),
             $path,
             'CSpell config file is missing',
         );
@@ -198,7 +289,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         file_put_contents($path, $contents);
 
         try {
-            WordlistDocumentationConfigSync::writeCspellWords($path, ['word']);
+            $this->invokePrivateStatic('writeCspellWords', [$path, ['word']]);
             self::fail('Expected RuntimeException was not thrown.');
         } catch (RuntimeException $exception) {
             self::assertSame(0, $exception->getCode());
@@ -231,7 +322,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
 
         try {
             $this->assertRuntimeExceptionContainsPath(
-                static fn (): array => WordlistDocumentationConfigSync::readWordlist($path),
+                fn (): mixed => $this->invokePrivateStatic('readWordlist', [$path]),
                 $path,
                 'Wordlist file is not readable',
             );
@@ -244,15 +335,17 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
     #[Test]
     public function writeCspellWordsThrowsWhenConfigIsNotWritable(): void
     {
+        if (! ProjectSandbox::canSimulateUnreadableFiles()) {
+            self::markTestSkipped('File permission tests cannot run on Windows or as root.');
+        }
+
         $path = $this->getTmpDir() . 'read-only-cspell.json';
         file_put_contents($path, '{"words":[]}');
         chmod($path, 0444);
 
         try {
             $this->assertRuntimeExceptionContainsPath(
-                static function () use ($path): void {
-                    WordlistDocumentationConfigSync::writeCspellWords($path, ['word']);
-                },
+                fn (): mixed => $this->invokePrivateStatic('writeCspellWords', [$path, ['word']]),
                 $path,
                 'Failed to write CSpell config file',
             );
@@ -275,9 +368,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
 
         try {
             $this->assertRuntimeExceptionContainsPath(
-                static function () use ($path): void {
-                    WordlistDocumentationConfigSync::writeCspellWords($path, ['word']);
-                },
+                fn (): mixed => $this->invokePrivateStatic('writeCspellWords', [$path, ['word']]),
                 $path,
                 'CSpell config file is not readable',
             );
@@ -285,6 +376,14 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
             chmod($path, 0644);
             unlink($path);
         }
+    }
+
+    /** @param list<mixed> $arguments */
+    private function invokePrivateStatic(string $method, array $arguments = []): mixed
+    {
+        $reflectionMethod = new ReflectionClass(WordlistDocumentationConfigSync::class)->getMethod($method);
+
+        return $reflectionMethod->invokeArgs(null, $arguments);
     }
 
     /** @param callable(): mixed $action */
