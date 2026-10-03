@@ -6,7 +6,9 @@
         "var/**",
         "vendor/**",
         ".git/**",
-        ".idea/**"
+        ".idea/**",
+        ".helm/**",
+        ".terraform/**"
     ],
     "words": [
         "AiTells",
