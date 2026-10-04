@@ -144,9 +144,38 @@ The generator inspects `composer.json` requirements and adjusts the `Makefile` (
 
 ## CI integration
 
-Annotated targets carry markers (for example `##*LCH*##`) that [`TaskListInjector`](src/Composer/Installer/TaskListInjector.php) turns into JSON job lists. GitHub Actions workflows in consuming repositories call `make task-list-ci-locked`, `make task-list-ci-low`, `make task-list-ci-high`, or related targets to build matrices for locked, lowest, and highest dependency runs across supported operating systems.
+Fragment targets declare which aggregates they belong to with a help suffix such as `##*LCH*##`. During `composer install` / `composer update`, [`TaskListInjector`](src/Composer/Installer/TaskListInjector.php) reads those markers and expands placeholders like `make-list(all)` and `task-list(ci-locked)` in [`includes/All.mk`](includes/All.mk), [`includes/Contrib.mk`](includes/Contrib.mk), and [`includes/TaskFinders.mk`](includes/TaskFinders.mk).
 
-Run `make supported-features` locally to inspect the feature flags CI uses to filter jobs.
+GitHub Actions workflows in consuming repositories call `make task-list-ci-locked`, `make task-list-ci-low`, `make task-list-ci-high`, or related targets to build JSON job lists for matrix pipelines. Run `make supported-features` locally to inspect the feature flags CI uses to filter jobs.
+
+### Aggregate markers
+
+Place one or more marker letters between `##*` and `*##` on the same line as the target help text (after the `##` description). Letters combine: `##*LCH*##` enrolls the target in every aggregate listed for `L`, `C`, and `H`.
+
+Optional **feature gates** append `##^feature^##` or `##^one|other^##` (pipe-separated). The target is omitted from generated lists when any listed [supported feature](#supported-features-matrix) is turned off.
+
+| Marker | Meaning | Aggregates |
+| --- | --- | --- |
+| `A` | Full local QA and every CI variation | `make all`, `task-list-ci-all` |
+| `E` | Contributor workflow (also local full QA) | `make all`, `make contrib`, `make help-contrib` |
+| `I` | Install / update maintenance ([`I` and hash count](#i-and-hash-count)) | `make on-install-or-update`, and sometimes `make all` |
+| `K` | CI once on locked dependencies | `task-list-ci-locked` |
+| `D` | CI jobs that run directly on the OS (not in the PHP container) | `task-list-ci-dos` |
+| `L` | CI against lowest dependencies | `make all`, `task-list-ci-all`, `task-list-ci-low` |
+| `C` | CI on locked deps plus the full matrix | `make all`, `task-list-ci-all`, `task-list-ci-locked` |
+| `H` | CI against highest dependencies | `make all`, `task-list-ci-all`, `task-list-ci-high` |
+
+### `I` and hash count
+
+Migration targets use `####` in the help prefix (four `#` characters before the description). Those run only under `on-install-or-update`. A target with `##` (two `#` characters) and `I` is also included in local `make all`, but not in `task-list-ci-all`.
+
+Examples from this package:
+
+- `stan` and `mutation-testing` typically use `##*LCH*##` so they run locally and across CI dependency/OS matrices.
+- Individual documentation tools use `##*K*##` so CI runs them once on locked dependencies; see [`includes/Documentation.QA.mk`](includes/Documentation.QA.mk).
+- `documentation-qa` uses `##*E*##`: local `make all` and `make contrib`, not `task-list-ci-all` (CI still runs the `K` subtargets via `task-list-ci-locked`).
+
+Custom targets in `etc/Makefile` can use the same markers so `make install` regenerates aggregate and CI task lists consistently.
 
 ## License
 
