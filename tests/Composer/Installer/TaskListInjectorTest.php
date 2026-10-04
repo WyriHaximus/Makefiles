@@ -75,7 +75,7 @@ MAKEFILE,
         yield 'feature gate on first target does not skip second target' => [
             "make-list(all)\nmake-list(contrib)\nALL_HAS_DIRECT_DOCKER_TASKS=when_aggregate_has_direct_docker_tasks(all, TRUE, FALSE)\ngated: ## cs ##*A*##^code-style^##\nenabled: ## ok ##*A*##\ncontrib-task: ## contrib ##*E*##\n",
             $features,
-            ['$(MAKE) enabled ## Count: 1', '$(MAKE) contrib-task ## Count: 1'],
+            ['$(MAKE) enabled contrib-task ## Count: 2', '$(MAKE) contrib-task ## Count: 1'],
             ['$(MAKE) gated'],
         ];
     }
@@ -171,8 +171,8 @@ MAKEFILE;
         );
 
         $expected = <<<'MAKEFILE'
-$(MAKE) alpha zeta eta theta docker-task ## Count: 5
-@echo "[\"alpha\",\"zeta\",\"eta\",\"theta\",\"docker-task\"]" ## Count: 5
+$(MAKE) alpha gamma zeta eta theta docker-task ## Count: 6
+@echo "[\"alpha\",\"gamma\",\"zeta\",\"eta\",\"theta\",\"docker-task\"]" ## Count: 6
 $(MAKE) alpha beta docker-task ## Count: 3
 ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
 alpha: ## all ##*AI*##
@@ -377,6 +377,43 @@ $(MAKE) enabled ## Count: 1
 @echo "[\"enabled\"]" ## Count: 1
 gated: ## cs ##*A*##^code-style^##
 enabled: ## ok ##*A*##
+
+MAKEFILE;
+
+        self::assertSame($expected, TaskListInjector::inject($context, $input));
+    }
+
+    #[Test]
+    public function injectIncludesDocumentationQaInAllAndContribButNotCiAll(): void
+    {
+        $input = <<<'MAKEFILE'
+make-list(all)
+make-list(contrib)
+make-list(ci-all)
+task-list(all)
+task-list(contrib)
+task-list(ci-all)
+documentation-qa: documentation-markdownlint ## Run all ##*E*##
+documentation-markdownlint: ## Lint ##*K*##
+
+MAKEFILE;
+
+        $context = ProjectSandbox::context(
+            $this->getTmpDir(),
+            $this->getTmpDir(),
+            new Requirements([], []),
+            SupportedFeatures::DEFAULTS,
+        );
+
+        $expected = <<<'MAKEFILE'
+$(MAKE) documentation-qa ## Count: 1
+$(MAKE) documentation-qa ## Count: 1
+$(MAKE)  ## Count: 0
+@echo "[\"documentation-qa\"]" ## Count: 1
+@echo "[\"documentation-qa\"]" ## Count: 1
+@echo "[]" ## Count: 0
+documentation-qa: documentation-markdownlint ## Run all ##*E*##
+documentation-markdownlint: ## Lint ##*K*##
 
 MAKEFILE;
 

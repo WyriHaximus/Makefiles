@@ -40,7 +40,10 @@ final class TaskListInjector
                 'all',
                 'ci-all',
             ],
-            'E' => ['contrib'],
+            'E' => [
+                'all',
+                'contrib',
+            ],
             'D' => ['ci-dos'],
             'K' => ['ci-locked'],
             'I' => [
