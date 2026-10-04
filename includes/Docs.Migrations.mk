@@ -28,6 +28,15 @@ migrations-docs-create-documentation-markdownlint-config-if-not-exists: #### Cre
 migrations-docs-create-lychee-config-if-not-exists: #### Create `etc/qa/lychee.toml` when missing ##*I*##
 	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/lychee.toml"; if (file_exists($$configFile)) {exit;} if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(lychee.toml)"));' || true)
 
+migrations-docs-prepend-lychee-timeout-if-missing: #### Prepend Lychee timeout 120 to etc/qa/lychee.toml when missing ##*I*##
+	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/lychee.toml"; $$line = "timeout = 120\n"; if (!file_exists($$configFile)) {exit;} $$content = file_get_contents($$configFile); if (!is_string($$content) || preg_match("/^\s*timeout\s*=/m", $$content)) {exit;} file_put_contents($$configFile, $$line . $$content);' || true)
+
+migrations-docs-prepend-lychee-max-retries-if-missing: #### Prepend Lychee max_retries 6 to etc/qa/lychee.toml when missing ##*I*##
+	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/lychee.toml"; $$line = "max_retries = 6\n"; if (!file_exists($$configFile)) {exit;} $$content = file_get_contents($$configFile); if (!is_string($$content) || preg_match("/^\s*max_retries\s*=/m", $$content)) {exit;} file_put_contents($$configFile, $$line . $$content);' || true)
+
+migrations-docs-prepend-lychee-retry-wait-time-if-missing: #### Prepend Lychee retry_wait_time 3 to etc/qa/lychee.toml when missing ##*I*##
+	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/lychee.toml"; $$line = "retry_wait_time = 3\n"; if (!file_exists($$configFile)) {exit;} $$content = file_get_contents($$configFile); if (!is_string($$content) || preg_match("/^\s*retry_wait_time\s*=/m", $$content)) {exit;} file_put_contents($$configFile, $$line . $$content);' || true)
+
 migrations-docs-enforce-cspell-config-contents: #### Enforce `etc/qa/cspell.json` contents ##*I*##
 	($(DOCKER_RUN) php -r '$$configFile = "etc/qa/cspell.json"; if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} file_put_contents($$configFile, base64_decode("base64(cspell.json)"));' || true)
 
