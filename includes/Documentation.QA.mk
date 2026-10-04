@@ -14,6 +14,6 @@ documentation-typos: ## Check documentation spelling ##*K*##
 
 documentation-vale: ## Lint documentation prose (Vale) ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) sync --config etc/qa/vale.ini
-	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini --no-global README.md AGENTS.md CONTRIBUTING.md $$(find etc/ai -name '*.md' 2>/dev/null)
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini --no-global $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.idea/*" -not -path "./etc/qa/vale/*")
 
 documentation-qa: documentation-markdownlint documentation-links documentation-typos documentation-vale ## Run all documentation QA checks ##*E*##

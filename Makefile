@@ -491,7 +491,7 @@ migrations-ai-append-etc-agents-md-to-agents-md: #### Append `etc/AGENTS.md` to 
 documentation-wordlist-sync: #### Sync etc/base64 cspell and vale vocab from etc/wordlist.txt ##*IE*##
 	$(DOCKER_RUN) php -r 'require getcwd() . "/vendor/autoload.php"; \WyriHaximus\Makefiles\Documentation\WordlistDocumentationConfigSync::sync(getcwd());'
 
-after-renovate: ## Tasks to run after Renovate updates dependencies ####
+after-renovate: ## Tasks to run after Renovate updates dependencies; ensuring Makefile is updated with the latest changes ####
 	$(DOCKER_RUN) composer run-script pre-autoload-dump
 
 on-install-or-update: ## Tasks, like migrations, that specifically have be run after composer install or update. These will also run by self hosted Renovate ####
@@ -613,7 +613,7 @@ documentation-typos: ## Check documentation spelling ##*K*##
 
 documentation-vale: ## Lint documentation prose (Vale) ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) sync --config etc/qa/vale.ini
-	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini --no-global README.md AGENTS.md CONTRIBUTING.md $$(find etc/ai -name '*.md' 2>/dev/null)
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini --no-global $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.idea/*" -not -path "./etc/qa/vale/*")
 
 documentation-qa: documentation-markdownlint documentation-links documentation-typos documentation-vale ## Run all documentation QA checks ##*E*##
 
@@ -633,7 +633,7 @@ help: ## Show this help ####
 	@printf "  make [target]\n"
 	@printf "\n"
 	@printf "\033[33mTargets:\033[0m\n"
-	@printf "  \033[32m%-32s\033[0m %s\n" 'after-renovate' 'Tasks to run after Renovate updates dependencies'
+	@printf "  \033[32m%-32s\033[0m %s\n" 'after-renovate' 'Tasks to run after Renovate updates dependencies; ensuring Makefile is updated with the latest changes'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'all' 'Runs everything'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'backward-compatibility-check' 'Check code for backwards incompatible changes'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'backward-compatibility-check-raw' 'Check code for backwards incompatible changes, doesn'\''t ignore the failure'
