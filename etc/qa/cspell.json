@@ -64,8 +64,6 @@
         "Comment",
         "CompileError",
         "Composer",
-        "ComposerAutoloaderInit539be914951063f7d5090af0796f6e6e",
-        "ComposerStaticInit539be914951063f7d5090af0796f6e6e",
         "Connection",
         "Countable",
         "CryptoSafeEngine",

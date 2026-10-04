@@ -32,6 +32,7 @@ use function is_writable;
 use function json_decode;
 use function json_encode;
 use function ltrim;
+use function preg_match;
 use function rtrim;
 use function sort;
 use function trim;
@@ -118,7 +119,7 @@ final class WordlistDocumentationConfigSync
             if (is_array($config['words'] ?? null)) {
                 /** @var list<mixed> $rawWords */
                 $rawWords      = $config['words'];
-                $existingWords = self::stringListFromMixedList($rawWords);
+                $existingWords = self::withoutExcludedVolatilePhpSymbolWords(self::stringListFromMixedList($rawWords));
             }
 
             $config['words'] = self::mergeSortedUniqueWords($existingWords, $additionalWords);
@@ -132,7 +133,10 @@ final class WordlistDocumentationConfigSync
 
         self::writeValeVocab(
             $valeVocabPath,
-            self::mergeSortedUniqueWords(self::readWordlist($valeVocabPath), $additionalWords),
+            self::mergeSortedUniqueWords(
+                self::withoutExcludedVolatilePhpSymbolWords(self::readWordlist($valeVocabPath)),
+                $additionalWords,
+            ),
         );
     }
 
@@ -166,7 +170,7 @@ final class WordlistDocumentationConfigSync
             array_push($words, ...self::symbolNameSegments($class));
         }
 
-        $words = array_unique($words);
+        $words = self::withoutExcludedVolatilePhpSymbolWords(array_values(array_unique($words)));
         sort($words);
 
         return $words;
@@ -324,6 +328,24 @@ final class WordlistDocumentationConfigSync
         return array_values(array_filter(
             explode('\\', ltrim($symbolName, '\\')),
             static fn (string $chunk): bool => $chunk !== '',
+        ));
+    }
+
+    private static function isExcludedVolatilePhpSymbolWord(string $word): bool
+    {
+        return preg_match('/^(ComposerAutoloaderInit|ComposerStaticInit)[a-f0-9]+$/', $word) === 1;
+    }
+
+    /**
+     * @param list<string> $words
+     *
+     * @return list<string>
+     */
+    private static function withoutExcludedVolatilePhpSymbolWords(array $words): array
+    {
+        return array_values(array_filter(
+            $words,
+            static fn (string $word): bool => ! self::isExcludedVolatilePhpSymbolWord($word),
         ));
     }
 

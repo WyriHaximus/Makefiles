@@ -18,9 +18,14 @@ use function define;
 use function explode;
 use function file_get_contents;
 use function file_put_contents;
+use function get_declared_classes;
 use function json_decode;
 use function mkdir;
 use function rtrim;
+use function str_contains;
+use function str_starts_with;
+use function strrpos;
+use function substr;
 use function trim;
 use function unlink;
 
@@ -129,6 +134,46 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         $cspellWords = $cspell['words'];
         self::assertContains('manual', $cspellWords);
         self::assertContains('WordlistDocumentationConfigSync', $cspellWords);
+    }
+
+    #[Test]
+    public function enrichQaWordlistsWithPhpSymbolsOmitsVolatileComposerAutoloadClasses(): void
+    {
+        $staleAutoloader = 'ComposerAutoloaderInit539be914951063f7d5090af0796f6e6e';
+        $staleStatic     = 'ComposerStaticInit539be914951063f7d5090af0796f6e6e';
+
+        $root = $this->getTmpDir() . 'enrich-qa-no-composer-autoload/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents(
+            $root . 'etc/qa/cspell.json',
+            '{"words":["manual","' . $staleAutoloader . '","' . $staleStatic . '"]}',
+        );
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "manual\n" . $staleAutoloader . "\n" . $staleStatic . "\n");
+
+        WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols($root);
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertIsArray($cspell['words']);
+        /** @var list<string> $cspellWords */
+        $cspellWords = $cspell['words'];
+        self::assertContains('manual', $cspellWords);
+        self::assertNotContains($staleAutoloader, $cspellWords);
+        self::assertNotContains($staleStatic, $cspellWords);
+
+        foreach (get_declared_classes() as $class) {
+            $segment = str_contains($class, '\\') ? substr($class, (int) strrpos($class, '\\') + 1) : $class;
+            if (! str_starts_with($segment, 'ComposerAutoloaderInit') && ! str_starts_with($segment, 'ComposerStaticInit')) {
+                continue;
+            }
+
+            self::assertNotContains($segment, $cspellWords);
+        }
+
+        $valeLines = explode("\n", trim((string) file_get_contents($root . 'etc/qa/vale-vocab.txt')));
+        self::assertContains('manual', $valeLines);
+        self::assertNotContains($staleAutoloader, $valeLines);
+        self::assertNotContains($staleStatic, $valeLines);
     }
 
     #[Test]
