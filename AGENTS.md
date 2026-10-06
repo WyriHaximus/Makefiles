@@ -16,6 +16,7 @@ Before doing anything read this file to ensure you are up to date with it.
 - Check `make help-contrib` for all available contrib commands.
 - Need something custom that is not in the list? Use `make run "YOUR COMMAND HERE"` to run a command in the container and run whatever you require there.
 - If a package needs custom `make` commands, put them in `etc/Makefile`, then run `make install` to make them available through the root `Makefile`.
+- Always split tasks up in small chunks and feed those to sub agents, then collect what comes out of that, make logical groups for the next set of tasks to be split over subagents.
 
 ## Flow
 - After each logical block of changes made ensure `make contrib` passes.
@@ -85,9 +86,6 @@ Before doing anything read this file to ensure you are up to date with it.
 - Using the `assert` function
 - Assigning a property to a variable without assigning a new value to it
 - Never update `Makefile` or `AGENTS.md` outside [`wyrihaximus/makefiles`](https://github.com/WyriHaximus/Makefiles); suggest changes to that repository instead
-
-## Recovery
-- When you get `Error: RetriableError: [canceled] http/2 stream closed with error code CANCEL (0x8)` retry the request
 
 # Makefiles package (etc/)
 
