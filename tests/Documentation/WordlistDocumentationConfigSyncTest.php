@@ -177,6 +177,103 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
     }
 
     #[Test]
+    public function enrichQaWordlistsWithPhpSymbolsMergesComposerVendorAndPackageNames(): void
+    {
+        $root = $this->getTmpDir() . 'enrich-qa-composer-names/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "manual\n");
+        file_put_contents(
+            $root . 'composer.lock',
+            '{"packages":[{"name":"acme-corp/super-widget"}],"packages-dev":[{"name":"dev-vendor/dev-package"}]}',
+        );
+        file_put_contents($root . 'composer.json', '{"name":"root-vendor/root-package"}');
+
+        WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols($root);
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertIsArray($cspell['words']);
+        /** @var list<string> $cspellWords */
+        $cspellWords = $cspell['words'];
+        self::assertContains('manual', $cspellWords);
+        self::assertContains('acme-corp', $cspellWords);
+        self::assertContains('super-widget', $cspellWords);
+        self::assertContains('dev-vendor', $cspellWords);
+        self::assertContains('dev-package', $cspellWords);
+        self::assertContains('root-vendor', $cspellWords);
+        self::assertContains('root-package', $cspellWords);
+
+        $vale = (string) file_get_contents($root . 'etc/qa/vale-vocab.txt');
+        self::assertStringContainsString("acme-corp\n", $vale);
+        self::assertStringContainsString("super-widget\n", $vale);
+    }
+
+    #[Test]
+    public function enrichQaWordlistsWithPhpSymbolsSkipsMalformedComposerMetadata(): void
+    {
+        $root = $this->getTmpDir() . 'enrich-qa-malformed-composer/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":[]}');
+        file_put_contents(
+            $root . 'composer.lock',
+            '{"packages":"skip","packages-dev":["skip",{"name":""},{"name":1},{"name":"ok-vendor/ok-package"}]}',
+        );
+        file_put_contents($root . 'composer.json', '{');
+
+        WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols($root);
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertIsArray($cspell['words']);
+        /** @var list<string> $cspellWords */
+        $cspellWords = $cspell['words'];
+        self::assertContains('ok-vendor', $cspellWords);
+        self::assertContains('ok-package', $cspellWords);
+        self::assertNotContains('skip', $cspellWords);
+    }
+
+    #[Test]
+    public function enrichQaWordlistsWithPhpSymbolsIgnoresInvalidComposerLockJson(): void
+    {
+        $root = $this->getTmpDir() . 'enrich-qa-bad-composer-lock/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual"]}');
+        file_put_contents($root . 'composer.lock', '{');
+
+        WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols($root);
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertIsArray($cspell['words']);
+        /** @var list<string> $cspellWords */
+        $cspellWords = $cspell['words'];
+        self::assertContains('manual', $cspellWords);
+        self::assertContains('WordlistDocumentationConfigSync', $cspellWords);
+        self::assertNotContains('acme-corp', $cspellWords);
+    }
+
+    /** @param list<string> $expected */
+    #[Test]
+    #[DataProvider('provideComposerPackageNameSegments')]
+    public function composerPackageNameSegmentsSplitsVendorAndPackage(string $packageName, array $expected): void
+    {
+        self::assertSame(
+            $expected,
+            $this->invokePrivateStatic('composerPackageNameSegments', [$packageName]),
+        );
+    }
+
+    /** @return iterable<string, array{0: string, 1: list<string>}> */
+    public static function provideComposerPackageNameSegments(): iterable
+    {
+        yield 'vendor and package' => ['acme/widget', ['acme', 'widget']];
+        yield 'hyphenated segments' => ['acme-corp/super-widget', ['acme-corp', 'super-widget']];
+        yield 'vendor only' => ['solo-vendor', ['solo-vendor']];
+        yield 'trims whitespace' => [' spaced / name ', ['spaced', 'name']];
+    }
+
+    #[Test]
     public function enrichQaWordlistsWithPhpSymbolsIncludesUserDefinedConstantSegments(): void
     {
         define('WyriHaximus\\Tests\\Makefiles\\Documentation\\COVERAGE_CONST', 1);

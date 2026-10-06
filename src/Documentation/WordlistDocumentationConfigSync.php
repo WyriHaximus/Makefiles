@@ -8,6 +8,7 @@ use JsonException;
 use RuntimeException;
 
 use function array_filter;
+use function array_key_exists;
 use function array_keys;
 use function array_push;
 use function array_unique;
@@ -82,7 +83,12 @@ final class WordlistDocumentationConfigSync
      */
     public static function enrichQaWordlistsWithPhpSymbols(string $projectRoot): void
     {
-        self::mergeAdditionalWordsIntoQaWordlists(rtrim($projectRoot, '/\\'), self::phpSymbolWords());
+        $root = rtrim($projectRoot, '/\\');
+
+        self::mergeAdditionalWordsIntoQaWordlists(
+            $root,
+            self::mergeSortedUniqueWords(self::phpSymbolWords(), self::composerPackageWords($root)),
+        );
     }
 
     /**
@@ -172,6 +178,104 @@ final class WordlistDocumentationConfigSync
 
         $words = self::withoutExcludedVolatilePhpSymbolWords(array_values(array_unique($words)));
         sort($words);
+
+        return $words;
+    }
+
+    /** @return list<string> */
+    private static function composerPackageWords(string $projectRoot): array
+    {
+        $words = [];
+
+        foreach (self::composerInstalledPackageNames($projectRoot) as $packageName) {
+            array_push($words, ...self::composerPackageNameSegments($packageName));
+        }
+
+        $words = array_values(array_unique($words));
+        sort($words);
+
+        return $words;
+    }
+
+    /** @return list<string> */
+    private static function composerInstalledPackageNames(string $projectRoot): array
+    {
+        $names = [];
+
+        $lockPath = $projectRoot . DIRECTORY_SEPARATOR . 'composer.lock';
+        if (is_file($lockPath) && is_readable($lockPath)) {
+            $content = file_get_contents($lockPath);
+            if (is_string($content)) {
+                try {
+                    $lock = json_decode($content, true, self::CSPELL_JSON_DECODE_DEPTH, JSON_THROW_ON_ERROR);
+                } catch (JsonException) {
+                    $lock = null;
+                }
+
+                if (is_array($lock)) {
+                    foreach (['packages', 'packages-dev'] as $packagesKey) {
+                        if (! is_array($lock[$packagesKey] ?? null)) {
+                            continue;
+                        }
+
+                        foreach ($lock[$packagesKey] as $package) {
+                            if (! is_array($package)) {
+                                continue;
+                            }
+
+                            $name = $package['name'] ?? null;
+                            if (! is_string($name) || trim($name) === '') {
+                                continue;
+                            }
+
+                            $names[] = trim($name);
+                        }
+                    }
+                }
+            }
+        }
+
+        $composerJsonPath = $projectRoot . DIRECTORY_SEPARATOR . 'composer.json';
+        if (is_file($composerJsonPath) && is_readable($composerJsonPath)) {
+            $content = file_get_contents($composerJsonPath);
+            if (is_string($content)) {
+                try {
+                    $composerJson = json_decode($content, true, self::CSPELL_JSON_DECODE_DEPTH, JSON_THROW_ON_ERROR);
+                } catch (JsonException) {
+                    $composerJson = null;
+                }
+
+                if (is_array($composerJson)) {
+                    $rootName = $composerJson['name'] ?? null;
+                    if (is_string($rootName) && trim($rootName) !== '') {
+                        $names[] = trim($rootName);
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /** @return list<string> */
+    private static function composerPackageNameSegments(string $packageName): array
+    {
+        $segments = explode('/', $packageName, 2);
+        $words    = [];
+
+        $vendor = trim($segments[0]);
+        if ($vendor !== '') {
+            $words[] = $vendor;
+        }
+
+        if (! array_key_exists(1, $segments)) {
+            return $words;
+        }
+
+        $package = trim($segments[1]);
+        if ($package !== '') {
+            $words[] = $package;
+        }
 
         return $words;
     }

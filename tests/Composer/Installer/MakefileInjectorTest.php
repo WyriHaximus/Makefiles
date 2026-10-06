@@ -576,8 +576,7 @@ MAKEFILE,
     #[Test]
     public function supportedFeaturesInjectExpandsPlaceholders(): void
     {
-        $features                                 = SupportedFeatures::DEFAULTS;
-        $features[SupportedFeatures::FEATURE_ZTS] = false;
+        $features = SupportedFeatures::DEFAULTS;
 
         self::assertSame(
             '@echo "[\"code-style\",\"composer-dependency-checkers\",\"linux\",\"macos\",\"static-analysis\",\"unit-tests\",\"windows\"]" ## Count: 7' . "\n"
