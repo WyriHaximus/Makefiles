@@ -1214,7 +1214,6 @@ encoding
 end
 ends_with
 ends_with_ci
-entropy
 enum_case_of
 enum_exists
 enumerate
