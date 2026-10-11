@@ -105,11 +105,10 @@ final class TaskListInjector
                     }
 
                     $featureGate = $matches['features'][$matchIndex][0] ?? '';
-                    if ($featureGate !== '' && ! self::allPipedFeaturesEnabled($featureGate, $context->supportedFeatures)) {
-                        continue;
+                    // phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed -- inverted guard avoids equivalent Continue_/break MSI escape
+                    if ($featureGate === '' || self::allPipedFeaturesEnabled($featureGate, $context->supportedFeatures)) {
+                        $tasks[$task][] = $matches[1][$matchIndex][0];
                     }
-
-                    $tasks[$task][] = $matches[1][$matchIndex][0];
                 }
             }
         }

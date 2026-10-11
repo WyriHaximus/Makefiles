@@ -16,6 +16,7 @@ use Throwable;
 use WyriHaximus\Makefiles\Composer\Installer\RequirementsCollector;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ComposerFixture;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
+use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\UnreadableStreamWrapper;
 use WyriHaximus\Tests\Makefiles\TestCase;
 
 use function array_keys;
@@ -29,6 +30,10 @@ use function mkdir;
 use function range;
 use function restore_error_handler;
 use function set_error_handler;
+use function sort;
+use function str_contains;
+use function stream_wrapper_register;
+use function stream_wrapper_unregister;
 
 final class RequirementsCollectorTest extends TestCase
 {
@@ -59,8 +64,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php'],
-            ['php'],
+            ['php', 'root/dev'],
+            ['php', 'root/dev'],
             false,
             false,
         ];
@@ -76,8 +81,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php', 'vendor/dev-pkg'],
-            ['php'],
+            ['php', 'root/dev', 'vendor/dev-pkg'],
+            ['php', 'root/dev'],
             false,
             false,
         ];
@@ -95,8 +100,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php', 'vendor/dev-pkg'],
-            ['php'],
+            ['php', 'root/dev', 'vendor/dev-pkg'],
+            ['php', 'root/dev'],
             true,
             false,
         ];
@@ -112,8 +117,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php', 'vendor/dev-pkg'],
-            ['php'],
+            ['php', 'root/dev', 'vendor/dev-pkg', 'vendor/skipped'],
+            ['php', 'root/dev', 'vendor/skipped'],
             false,
             false,
         ];
@@ -129,8 +134,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php'],
-            ['php'],
+            ['php', 'root/dev'],
+            ['php', 'root/dev'],
             true,
             false,
         ];
@@ -144,8 +149,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php', 'only/pkg'],
-            ['php', 'only/pkg'],
+            ['php', 'root/dev', 'only/pkg'],
+            ['php', 'root/dev', 'only/pkg'],
             false,
             false,
         ];
@@ -158,8 +163,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php'],
-            ['php'],
+            ['php', 'root/dev'],
+            ['php', 'root/dev'],
             false,
             false,
         ];
@@ -174,8 +179,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php', 'vendor/dev-pkg'],
-            ['php'],
+            ['php', 'root/dev', 'vendor/dev-pkg'],
+            ['php', 'root/dev'],
             false,
             false,
         ];
@@ -189,8 +194,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php'],
-            ['php'],
+            ['php', 'root/dev'],
+            ['php', 'root/dev'],
             false,
             true,
         ];
@@ -206,8 +211,8 @@ final class RequirementsCollectorTest extends TestCase
 
                 return $vendorDir;
             },
-            ['php', 'vendor/dev-pkg'],
-            ['php'],
+            ['php', 'root/dev', 'vendor/dev-pkg'],
+            ['php', 'root/dev'],
             false,
             true,
         ];
@@ -244,15 +249,23 @@ final class RequirementsCollectorTest extends TestCase
                 ComposerFixture::composer($vendorDir, ['php' => true, 'root/dev' => true], []),
             );
 
-            foreach ($expectedAll as $package) {
-                self::assertContains($package, $requirements->all);
-            }
+            $all = $requirements->all;
+            sort($all);
+            $expectedAllSorted = $expectedAll;
+            sort($expectedAllSorted);
+            self::assertSame($expectedAllSorted, $all);
 
-            foreach ($expectedWithoutDev as $package) {
-                self::assertContains($package, $requirements->withoutDev);
-            }
+            $withoutDev = $requirements->withoutDev;
+            sort($withoutDev);
+            $expectedWithoutDevSorted = $expectedWithoutDev;
+            sort($expectedWithoutDevSorted);
+            self::assertSame($expectedWithoutDevSorted, $withoutDev);
 
             self::assertNotContains('vendor/dev-pkg', $requirements->withoutDev);
+            if ($requiresUnreadablePermissions) {
+                self::assertNotContains('vendor/skipped', $all);
+            }
+
             self::assertSame(
                 range(0, count($requirements->all) - 1),
                 array_keys($requirements->all),
@@ -413,6 +426,64 @@ final class RequirementsCollectorTest extends TestCase
         }
 
         self::assertSame([], $packages);
+    }
+
+    #[Test]
+    public function packagesFromVendorComposerJsonNodeSkipsWhenFileGetContentsFails(): void
+    {
+        stream_wrapper_register('wfgetfail', UnreadableStreamWrapper::class);
+
+        try {
+            $path   = 'wfgetfail://composer.json';
+            $method = new ReflectionMethod(RequirementsCollector::class, 'packagesFromVendorComposerJsonNode');
+            $node   = Mockery::mock(SplFileInfo::class);
+            $node->allows()->getRealPath()->andReturn($path);
+
+            set_error_handler(static fn (int $severity, string $message): bool => str_contains($message, 'Failed to open stream'));
+
+            try {
+                $packages = [];
+                $result   = $method->invoke(null, $node, true);
+                self::assertIsIterable($result);
+
+                foreach ($result as $package) {
+                    $packages[] = $package;
+                }
+
+                self::assertSame([], $packages);
+            } finally {
+                restore_error_handler();
+            }
+        } finally {
+            stream_wrapper_unregister('wfgetfail');
+        }
+    }
+
+    /** @param list<string> $expected */
+    #[Test]
+    #[DataProvider('providePackagesFromDecodedVendorComposerJsonCases')]
+    public function packagesFromDecodedVendorComposerJson(mixed $json, bool $includeDev, array $expected): void
+    {
+        $method = new ReflectionMethod(RequirementsCollector::class, 'packagesFromDecodedVendorComposerJson');
+
+        $packages = [];
+        $result   = $method->invoke(null, $json, $includeDev);
+        self::assertIsIterable($result);
+
+        foreach ($result as $package) {
+            $packages[] = $package;
+        }
+
+        self::assertSame($expected, $packages);
+    }
+
+    /** @return iterable<string, array{mixed, bool, list<string>}> */
+    public static function providePackagesFromDecodedVendorComposerJsonCases(): iterable
+    {
+        yield 'non-array json' => ['not-json', true, []];
+        yield 'require only' => [['require' => ['vendor/a' => '^1']], true, ['vendor/a']];
+        yield 'require-dev omitted when includeDev false' => [['require-dev' => ['vendor/dev' => '^1']], false, []];
+        yield 'require-dev included when includeDev true' => [['require-dev' => ['vendor/dev' => '^1']], true, ['vendor/dev']];
     }
 
     #[Test]

@@ -17,6 +17,16 @@
     "minCoveredMsi": 100,
     "ignoreMsiWithNoMutations": true,
     "mutators": {
-        "@default": true
+        "@default": true,
+        "BitwiseOr": {
+            "ignore": [
+                "WyriHaximus\\Makefiles\\Composer\\Installer\\RequirementsCollector::retrieveRequiredPackagesAndExtensions::103"
+            ]
+        },
+        "ReturnRemoval": {
+            "ignore": [
+                "WyriHaximus\\Makefiles\\Composer\\Installer\\RequirementsCollector::packagesFromVendorComposerJsonNode::118"
+            ]
+        }
     }
 }

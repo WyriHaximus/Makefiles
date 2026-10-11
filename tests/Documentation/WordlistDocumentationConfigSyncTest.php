@@ -348,6 +348,69 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         $constructor->invoke($reflection->newInstanceWithoutConstructor());
     }
 
+    /** @return iterable<string, array{0: string, 1: bool}> */
+    public static function provideIsExcludedVolatilePhpSymbolWordCases(): iterable
+    {
+        yield 'composer autoloader init hash' => ['ComposerAutoloaderInit539be914951063f7d5090af0796f6e6e', true];
+        yield 'composer static init hash' => ['ComposerStaticInit539be914951063f7d5090af0796f6e6e', true];
+        yield 'prefix only is not excluded' => ['ComposerAutoloaderInit', false];
+        yield 'invalid hash suffix is not excluded' => ['ComposerAutoloaderInitzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz', false];
+        yield 'unrelated symbol' => ['WordlistDocumentationConfigSync', false];
+    }
+
+    #[Test]
+    #[DataProvider('provideIsExcludedVolatilePhpSymbolWordCases')]
+    public function isExcludedVolatilePhpSymbolWord(string $word, bool $expected): void
+    {
+        self::assertSame($expected, $this->invokePrivateStatic('isExcludedVolatilePhpSymbolWord', [$word]));
+    }
+
+    #[Test]
+    public function isWritablePathReturnsTrueForWritableFile(): void
+    {
+        $path = $this->getTmpDir() . 'writable-file.txt';
+        file_put_contents($path, 'content');
+
+        self::assertTrue($this->invokePrivateStatic('isWritablePath', [$path]));
+    }
+
+    #[Test]
+    public function isWritablePathReturnsTrueWhenMissingFileHasWritableParentDirectory(): void
+    {
+        $directory = $this->getTmpDir() . 'writable-parent/';
+        mkdir($directory);
+        $path = $directory . 'new-file.txt';
+
+        self::assertTrue($this->invokePrivateStatic('isWritablePath', [$path]));
+    }
+
+    #[Test]
+    public function isWritablePathReturnsFalseWhenParentDirectoryDoesNotExist(): void
+    {
+        $path = $this->getTmpDir() . 'missing-parent/new-file.txt';
+
+        self::assertFalse($this->invokePrivateStatic('isWritablePath', [$path]));
+    }
+
+    #[Test]
+    public function isWritablePathReturnsFalseForReadOnlyFile(): void
+    {
+        if (! ProjectSandbox::canSimulateUnreadableFiles()) {
+            self::markTestSkipped('File permission tests cannot run on Windows or as root.');
+        }
+
+        $path = $this->getTmpDir() . 'read-only-is-writable-path.txt';
+        file_put_contents($path, 'content');
+        chmod($path, 0444);
+
+        try {
+            self::assertFalse($this->invokePrivateStatic('isWritablePath', [$path]));
+        } finally {
+            chmod($path, 0644);
+            unlink($path);
+        }
+    }
+
     #[Test]
     public function writeValeVocabCreatesFileWhenParentDirectoryIsWritable(): void
     {
