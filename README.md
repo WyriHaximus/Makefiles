@@ -1,6 +1,6 @@
 # Makefiles
 
-Shared [GNU Make](https://www.gnu.org/software/make/) targets and a [Composer](https://getcomposer.org/) plugin that generates a project `Makefile` for PHP libraries and applications maintained under [WyriHaximus](https://github.com/WyriHaximus).
+Shared [Make](https://en.wikipedia.org/wiki/Make_(software)) targets and a [Composer](https://getcomposer.org/) plugin that generates a project `Makefile` for PHP libraries and applications maintained under [WyriHaximus](https://github.com/WyriHaximus).
 
 ![Continuous Integration](https://github.com/wyrihaximus/makefiles/workflows/Continuous%20Integration/badge.svg)
 [![Latest Stable Version](https://poser.pugx.org/wyrihaximus/makefiles/v/stable.png)](https://packagist.org/packages/wyrihaximus/makefiles)
