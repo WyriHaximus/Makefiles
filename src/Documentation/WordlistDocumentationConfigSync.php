@@ -437,7 +437,7 @@ final class WordlistDocumentationConfigSync
 
     private static function isExcludedVolatilePhpSymbolWord(string $word): bool
     {
-        return preg_match('/^(ComposerAutoloaderInit|ComposerStaticInit)[a-f0-9]+$/', $word) === 1;
+        return preg_match('/(ComposerAutoloaderInit|ComposerStaticInit)[a-f0-9]+/', $word) === 1;
     }
 
     /**

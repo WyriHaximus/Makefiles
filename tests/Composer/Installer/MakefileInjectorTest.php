@@ -382,6 +382,8 @@ MAKEFILE,
     /** @return iterable<string, array{string, string}> */
     public static function provideSupportedFeatureNormalizeValueCases(): iterable
     {
+        yield 'empty string' => ['', ''];
+        yield 'lone double quote character' => ['"', '"'];
         yield 'empty quoted literal' => ['""', ''];
         yield 'single quoted character' => ['"x"', 'x'];
         yield 'quoted two character inner' => ['"ab"', 'ab'];

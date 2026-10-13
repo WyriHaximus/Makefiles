@@ -15,7 +15,6 @@ use function array_key_exists;
 use function array_keys;
 use function array_unique;
 use function array_values;
-use function assert;
 use function file_get_contents;
 use function is_array;
 use function is_dir;
@@ -120,9 +119,19 @@ final class RequirementsCollector
         }
 
         $composerJson = file_get_contents($realPath);
-        assert(is_string($composerJson));
+        if ($composerJson === false) {
+            return;
+        }
 
-        $json = json_decode($composerJson, true);
+        yield from self::packagesFromDecodedVendorComposerJson(
+            json_decode($composerJson, true),
+            $includeDev,
+        );
+    }
+
+    /** @return iterable<string> */
+    private static function packagesFromDecodedVendorComposerJson(mixed $json, bool $includeDev): iterable
+    {
         if (! is_array($json)) {
             return;
         }

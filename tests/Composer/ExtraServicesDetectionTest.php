@@ -16,6 +16,7 @@ use function file_get_contents;
 use function file_put_contents;
 use function is_dir;
 use function mkdir;
+use function strpos;
 
 use const DIRECTORY_SEPARATOR;
 
@@ -213,10 +214,16 @@ MAKEFILE,
         self::assertIsString($template);
         self::assertStringContainsString('ifeq ("$(GITHUB_ACTIONS)","true")', $template);
         self::assertStringContainsString('IN_CI=FALSE', $template);
-        self::assertStringContainsString('MUTATION_THREADS?=$(THREADS)', $template);
-        self::assertStringContainsString('ifeq ("$(IN_CI)","TRUE")', $template);
-        self::assertStringContainsString('MUTATION_THREADS?=1', $template);
-        self::assertStringContainsString('-e MUTATION_THREADS="${MUTATION_THREADS}"', $template);
+        self::assertStringNotContainsString('MUTATION_THREADS', $template);
+        self::assertStringContainsString('INFECTION_THREADS_DETECT', $template);
+        self::assertStringContainsString('INFECTION_CONFIG_HAS_THREADS', $template);
+        self::assertStringContainsString('INFECTION_THREADS_CLI', $template);
+        self::assertStringContainsString('$(DOCKER_RUN) $(INFECTION_THREADS_DETECT)', $template);
+        self::assertLessThan(
+            strpos($template, 'INFECTION_CONFIG_HAS_THREADS'),
+            strpos($template, 'DOCKER_RUN:=docker run'),
+            'INFECTION_CONFIG_HAS_THREADS must be evaluated after DOCKER_RUN is defined',
+        );
         self::assertStringContainsString('OTEL_PHP_FIBERS_ENABLED?=when_in_requirements', $template);
         self::assertStringNotContainsString('include includes/Services.mk', $template);
         self::assertStringNotContainsString('RUN_WITH_EXTRA_SERVICES', $template);
@@ -224,14 +231,14 @@ MAKEFILE,
     }
 
     #[Test]
-    public function phpMkUsesMutationThreadsForInfection(): void
+    public function phpMkUsesConditionalInfectionThreadsCli(): void
     {
         $phpMkPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'PHP.mk';
         $phpMk     = file_get_contents($phpMkPath);
 
         self::assertIsString($phpMk);
-        self::assertStringContainsString('--threads=$(MUTATION_THREADS)', $phpMk);
-        self::assertStringNotContainsString('--threads=$(THREADS)', $phpMk);
+        self::assertStringContainsString('$(INFECTION_THREADS_CLI)', $phpMk);
+        self::assertStringNotContainsString('--threads=$(', $phpMk);
     }
 
     #[Test]
