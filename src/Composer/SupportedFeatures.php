@@ -11,6 +11,8 @@ final class SupportedFeatures
     public const string FEATURE_COMPOSER_DEPENDENCY_CHECKERS  = 'composer-dependency-checkers';
     public const string FEATURE_LINUX                         = 'linux';
     public const string FEATURE_MACOS                         = 'macos';
+    public const string FEATURE_PACKAGE                       = 'package';
+    public const string FEATURE_PROJECT                       = 'project';
     public const string FEATURE_STATIC_ANALYSIS               = 'static-analysis';
     public const string FEATURE_UNIT_TESTS                    = 'unit-tests';
     public const string FEATURE_OPENTELEMETRY_INSTRUMENTATION = 'opentelemetry-instrumentation';
@@ -22,6 +24,8 @@ final class SupportedFeatures
         self::FEATURE_COMPOSER_DEPENDENCY_CHECKERS => true,
         self::FEATURE_LINUX => true,
         self::FEATURE_MACOS => true,
+        self::FEATURE_PACKAGE => true,
+        self::FEATURE_PROJECT => false,
         self::FEATURE_STATIC_ANALYSIS => true,
         self::FEATURE_OPENTELEMETRY_INSTRUMENTATION => false,
         self::FEATURE_UNIT_TESTS => true,

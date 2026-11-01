@@ -75,7 +75,10 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         );
     }
 
-    /** @param non-empty-string $composerJsonPath */
+    /**
+     * @param non-empty-string $rootPackagePath
+     * @param non-empty-string $composerJsonPath
+     */
     private static function generateMakefileFromComposerJson(
         Event $event,
         string $rootPackagePath,
@@ -90,7 +93,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
             return;
         }
 
-        $supportedFeatures = SupportedFeaturesResolver::resolve($json, $requirements);
+        $supportedFeatures = SupportedFeaturesResolver::resolve($json, $requirements, $rootPackagePath);
         $selfRoot          = null;
 
         if (array_key_exists('name', $json) && $json['name'] === 'wyrihaximus/makefiles') {
@@ -118,6 +121,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         ));
     }
 
+    /** @return non-empty-string */
     private static function rootPackagePathFromVendorDir(string $vendorDir): string
     {
         return dirname($vendorDir) . DIRECTORY_SEPARATOR;
