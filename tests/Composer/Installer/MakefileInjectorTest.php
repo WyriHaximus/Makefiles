@@ -586,7 +586,7 @@ MAKEFILE,
             file_put_contents($root . 'composer.json', $composerJson);
         }
 
-        $result = HelpInjector::inject($input, $root);
+        $result = HelpInjector::inject($input, $root, []);
 
         foreach ($contains as $needle) {
             self::assertStringContainsString($needle, $result);

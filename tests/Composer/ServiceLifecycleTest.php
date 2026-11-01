@@ -34,6 +34,47 @@ final class ServiceLifecycleTest extends TestCase
     }
 
     #[Test]
+    public function serviceCleanupTargetFromRecipeLineReturnsNullForNonMatchingLines(): void
+    {
+        $method = new ReflectionMethod(ServiceLifecycleInjector::class, 'serviceCleanupTargetFromRecipeLine');
+        // Lines not starting with \tservice_cleanup( must return null
+        self::assertNull($method->invoke(null, 'service_cleanup(down)'));
+        self::assertNull($method->invoke(null, "\tother-command"));
+        self::assertNull($method->invoke(null, ''));
+        self::assertNull($method->invoke(null, "\tservice_cleanup()"));
+        self::assertNull($method->invoke(null, "\tservice_cleanup(up) extra"));
+    }
+
+    #[Test]
+    public function serviceCleanupTargetFromRecipeLineRequiresAnchorAtStart(): void
+    {
+        $method = new ReflectionMethod(ServiceLifecycleInjector::class, 'serviceCleanupTargetFromRecipeLine');
+        // A line with service_cleanup but not at the very start after tab should return null
+        self::assertNull($method->invoke(null, "\t service_cleanup(down)"));
+        self::assertNull($method->invoke(null, "\t\tservice_cleanup(down)"));
+    }
+
+    #[Test]
+    public function serviceCleanupTargetFromRecipeLineRejectsLineWithoutLeadingTab(): void
+    {
+        $method = new ReflectionMethod(ServiceLifecycleInjector::class, 'serviceCleanupTargetFromRecipeLine');
+        // No leading tab → must return null (kills ReturnRemoval mutant)
+        self::assertNull($method->invoke(null, 'service_cleanup(down)'));
+        // Leading tab but wrong content → must return null
+        self::assertNull($method->invoke(null, "\tservice_cleanup(UPPERCASE)"));
+        self::assertNull($method->invoke(null, "\tservice_cleanup(name with spaces)"));
+    }
+
+    #[Test]
+    public function serviceCleanupTargetFromRecipeLineRejectsTrailingContent(): void
+    {
+        $method = new ReflectionMethod(ServiceLifecycleInjector::class, 'serviceCleanupTargetFromRecipeLine');
+        // Extra content after the closing paren → must return null (kills PregMatchRemoveCaret mutant)
+        self::assertNull($method->invoke(null, "\tservice_cleanup(down) extra"));
+        self::assertNull($method->invoke(null, "\tservice_cleanup(down)\n"));
+    }
+
+    #[Test]
     public function isMakefileTargetDefinitionLineRequiresColumnZeroTargetHeader(): void
     {
         $method = new ReflectionMethod(ServiceLifecycleInjector::class, 'isMakefileTargetDefinitionLine');

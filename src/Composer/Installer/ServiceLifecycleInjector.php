@@ -158,10 +158,6 @@ final class ServiceLifecycleInjector
 
     private static function serviceCleanupTargetFromRecipeLine(string $recipeLine): string|null
     {
-        if (! str_starts_with($recipeLine, "\tservice_cleanup(")) {
-            return null;
-        }
-
         if (preg_match('/^\tservice_cleanup\(([a-z0-9-]+)\)\z/', $recipeLine, $matches) !== 1) {
             return null;
         }

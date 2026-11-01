@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
+use function array_all;
+use function array_key_exists;
 use function array_values;
+use function explode;
 use function implode;
 use function ksort;
 use function preg_match;
@@ -32,7 +35,8 @@ final class HelpInjector
     {
     }
 
-    public static function inject(string $makefileContents, string $rootPackagePath): string
+    /** @param array<string, bool> $supportedFeatures */
+    public static function inject(string $makefileContents, string $rootPackagePath, array $supportedFeatures): string
     {
         $bannerLines = AsciiBannerGenerator::forPackage($rootPackagePath);
         /** @var array<string, list<array{0: string, 1: string}>> $helpTargets */
@@ -43,13 +47,19 @@ final class HelpInjector
         ];
 
         preg_match_all(
-            '/^([a-zA-Z0-9_-]+):.*?## (.+)$/m',
+            '/^([a-zA-Z0-9_-]+):.*?## (.+?)(?:##\^(.+?)\^##)?\s*$/m',
             $makefileContents,
             $matches,
         );
 
         foreach ($matches[0] as $i => $fullLine) {
             if (str_contains($fullLine, '##U##')) {
+                continue;
+            }
+
+            $featureGate = $matches[3][$i] ?? '';
+            // phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed -- inverted guard avoids equivalent Continue_/break MSI escape
+            if ($featureGate !== '' && ! self::allPipedFeaturesEnabled($featureGate, $supportedFeatures)) {
                 continue;
             }
 
@@ -176,5 +186,14 @@ final class HelpInjector
     private static function executorFlagsIncludeE(string $flags): bool
     {
         return str_contains($flags, 'E') && ! str_contains($flags, '*');
+    }
+
+    /** @param array<string, bool> $supportedFeatures */
+    private static function allPipedFeaturesEnabled(string $pipedFeatures, array $supportedFeatures): bool
+    {
+        return array_all(
+            explode('|', $pipedFeatures),
+            static fn (string $feature): bool => array_key_exists($feature, $supportedFeatures) && $supportedFeatures[$feature] !== false,
+        );
     }
 }

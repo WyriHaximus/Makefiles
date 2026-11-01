@@ -60,10 +60,10 @@ composer-require-checker: ## Ensure we require every package used in this packag
 composer-unused: ## Ensure we don't require any package we don't use in this package directly ##*EC*##^composer-dependency-checkers^##
 	$(DOCKER_SHELL) vendor/bin/composer-unused --ansi --configuration=./etc/qa/composer-unused.php
 
-backward-compatibility-check: ## Check code for backwards incompatible changes ##*C*##
+backward-compatibility-check: ## Check code for backwards incompatible changes ##*C*##^package^##
 	$(MAKE) backward-compatibility-check-raw || true
 
-backward-compatibility-check-raw: ## Check code for backwards incompatible changes, doesn't ignore the failure ###
+backward-compatibility-check-raw: ## Check code for backwards incompatible changes, doesn't ignore the failure ####^package^##
 	$(DOCKER_SHELL) vendor/bin/roave-backward-compatibility-check
 
 install: ### Install dependencies ####

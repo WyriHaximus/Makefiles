@@ -31,6 +31,9 @@ hidden: ## Hidden ##U##
 gamma: ## Hash#suffix ####
 MAKEFILE;
 
+    // Default: all features enabled
+    private const array DEFAULT_SUPPORTED_FEATURES = [];
+
     #[Test]
     public function injectReplacesHelpPlaceholdersWithGoldenOutput(): void
     {
@@ -78,7 +81,7 @@ hidden: ## Hidden ##U##
 gamma: ## Hash#suffix ####
 EXPECTED;
 
-        self::assertSame($expected, HelpInjector::inject(self::GOLDEN_MAKEFILE, $root));
+        self::assertSame($expected, HelpInjector::inject(self::GOLDEN_MAKEFILE, $root, self::DEFAULT_SUPPORTED_FEATURES));
     }
 
     #[Test]
@@ -115,7 +118,7 @@ plain: ## Plain ##*A*##
 contrib-only: ## Contrib only ##*E*##
 EXPECTED;
 
-        self::assertSame($expected, HelpInjector::inject($input, $root));
+        self::assertSame($expected, HelpInjector::inject($input, $root, self::DEFAULT_SUPPORTED_FEATURES));
     }
 
     /** @return iterable<string, array{string, string, string}> */
@@ -253,7 +256,7 @@ aa: ## Z description ####
 a: ## A description ####
 EXPECTED;
 
-        self::assertSame($expected, HelpInjector::inject($input, $root));
+        self::assertSame($expected, HelpInjector::inject($input, $root, self::DEFAULT_SUPPORTED_FEATURES));
     }
 
     #[Test]
@@ -278,7 +281,7 @@ dup: ## First ####
 dup: ## Second ####
 EXPECTED;
 
-        self::assertSame($expected, HelpInjector::inject($input, $root));
+        self::assertSame($expected, HelpInjector::inject($input, $root, self::DEFAULT_SUPPORTED_FEATURES));
     }
 
     #[Test]
@@ -301,6 +304,169 @@ MAKEFILE;
 plain: ## Full description without hash ####
 EXPECTED;
 
-        self::assertSame($expected, HelpInjector::inject($input, $root));
+        self::assertSame($expected, HelpInjector::inject($input, $root, self::DEFAULT_SUPPORTED_FEATURES));
+    }
+
+    #[Test]
+    public function injectHidesTaskWithDisabledFeatureGate(): void
+    {
+        $root = $this->getTmpDir() . 'help-feature-gate/';
+        mkdir($root);
+
+        $input = <<<'MAKEFILE'
+help(main)
+plain: ## Plain task ####
+gated: ## Gated task ##*A*##^package^##
+after-gated: ## After gated task ####
+MAKEFILE;
+
+        $expected = <<<'EXPECTED'
+@printf "\033[33mUsage:\033[0m\n"
+	@printf "  make [target]\n"
+	@printf "\n"
+	@printf "\033[33mTargets:\033[0m\n"
+	@printf "  \033[32m%-32s\033[0m %s\n" 'after-gated' 'After gated task'
+	@printf "  \033[32m%-32s\033[0m %s\n" 'plain' 'Plain task'
+plain: ## Plain task ####
+gated: ## Gated task ##*A*##^package^##
+after-gated: ## After gated task ####
+EXPECTED;
+
+        self::assertSame($expected, HelpInjector::inject($input, $root, ['package' => false]));
+    }
+
+    #[Test]
+    public function injectShowsTaskWithEnabledFeatureGate(): void
+    {
+        $root = $this->getTmpDir() . 'help-feature-gate-enabled/';
+        mkdir($root);
+
+        $input = <<<'MAKEFILE'
+help(main)
+plain: ## Plain task ####
+gated: ## Gated task ##*A*##^package^##
+MAKEFILE;
+
+        $expected = <<<'EXPECTED'
+@printf "\033[33mUsage:\033[0m\n"
+	@printf "  make [target]\n"
+	@printf "\n"
+	@printf "\033[33mTargets:\033[0m\n"
+	@printf "  \033[32m%-32s\033[0m %s\n" 'gated' 'Gated task'
+	@printf "  \033[32m%-32s\033[0m %s\n" 'plain' 'Plain task'
+plain: ## Plain task ####
+gated: ## Gated task ##*A*##^package^##
+EXPECTED;
+
+        self::assertSame($expected, HelpInjector::inject($input, $root, ['package' => true]));
+    }
+
+    #[Test]
+    public function injectHidesTaskWithPipedFeatureGateWhenAnyFeatureDisabled(): void
+    {
+        $root = $this->getTmpDir() . 'help-piped-feature-gate/';
+        mkdir($root);
+
+        $input = <<<'MAKEFILE'
+help(main)
+plain: ## Plain task ####
+gated: ## Gated task ##*A*##^package|composer-dependency-checkers^##
+MAKEFILE;
+
+        $expected = <<<'EXPECTED'
+@printf "\033[33mUsage:\033[0m\n"
+	@printf "  make [target]\n"
+	@printf "\n"
+	@printf "\033[33mTargets:\033[0m\n"
+	@printf "  \033[32m%-32s\033[0m %s\n" 'plain' 'Plain task'
+plain: ## Plain task ####
+gated: ## Gated task ##*A*##^package|composer-dependency-checkers^##
+EXPECTED;
+
+        // package=false should hide the task even if composer-dependency-checkers is true
+        self::assertSame($expected, HelpInjector::inject($input, $root, ['package' => false, 'composer-dependency-checkers' => true]));
+    }
+
+    #[Test]
+    public function injectShowsTaskWithPipedFeatureGateWhenAllFeaturesEnabled(): void
+    {
+        $root = $this->getTmpDir() . 'help-piped-feature-gate-enabled/';
+        mkdir($root);
+
+        $input = <<<'MAKEFILE'
+help(main)
+plain: ## Plain task ####
+gated: ## Gated task ##*A*##^package|composer-dependency-checkers^##
+MAKEFILE;
+
+        $expected = <<<'EXPECTED'
+@printf "\033[33mUsage:\033[0m\n"
+	@printf "  make [target]\n"
+	@printf "\n"
+	@printf "\033[33mTargets:\033[0m\n"
+	@printf "  \033[32m%-32s\033[0m %s\n" 'gated' 'Gated task'
+	@printf "  \033[32m%-32s\033[0m %s\n" 'plain' 'Plain task'
+plain: ## Plain task ####
+gated: ## Gated task ##*A*##^package|composer-dependency-checkers^##
+EXPECTED;
+
+        self::assertSame($expected, HelpInjector::inject($input, $root, ['package' => true, 'composer-dependency-checkers' => true]));
+    }
+
+    #[Test]
+    public function injectHidesGatedMigrationTaskWhenFeatureDisabled(): void
+    {
+        $root = $this->getTmpDir() . 'help-migration-feature-gate/';
+        mkdir($root);
+
+        $input = <<<'MAKEFILE'
+help(main)
+help(migrations)
+migrations-run: ## Run migration ##*A*##^package^##
+MAKEFILE;
+
+        $expected = <<<'EXPECTED'
+@printf "\033[33mUsage:\033[0m\n"
+	@printf "  make [target]\n"
+	@printf "\n"
+	@printf "\033[33mTargets:\033[0m\n"
+@printf "%s\n" ''
+	@printf "%s\n" ' ._ _    o    _    ._    _.   _|_   o    _    ._     _'
+	@printf "%s\n" ' | | |   |   (_|   |    (_|    |_   |   (_)   | |   _>'
+	@printf "%s\n" '              _|'
+	@printf "\n"
+	@printf "\033[33mUsage:\033[0m\n"
+	@printf "  make [target]\n"
+	@printf "\n"
+	@printf "\033[33mTargets:\033[0m\n"
+migrations-run: ## Run migration ##*A*##^package^##
+EXPECTED;
+
+        self::assertSame($expected, HelpInjector::inject($input, $root, ['package' => false]));
+    }
+
+    #[Test]
+    public function allPipedFeaturesEnabledReturnsTrueWhenAllFeaturesEnabled(): void
+    {
+        $method = new ReflectionMethod(HelpInjector::class, 'allPipedFeaturesEnabled');
+        self::assertTrue($method->invoke(null, 'package', ['package' => true]));
+        self::assertTrue($method->invoke(null, 'package|composer-dependency-checkers', ['package' => true, 'composer-dependency-checkers' => true]));
+    }
+
+    #[Test]
+    public function allPipedFeaturesEnabledReturnsFalseWhenAnyFeatureDisabled(): void
+    {
+        $method = new ReflectionMethod(HelpInjector::class, 'allPipedFeaturesEnabled');
+        self::assertFalse($method->invoke(null, 'package', ['package' => false]));
+        self::assertFalse($method->invoke(null, 'package|composer-dependency-checkers', ['package' => false, 'composer-dependency-checkers' => true]));
+        self::assertFalse($method->invoke(null, 'package|composer-dependency-checkers', ['package' => true, 'composer-dependency-checkers' => false]));
+    }
+
+    #[Test]
+    public function allPipedFeaturesEnabledReturnsFalseForUnknownFeature(): void
+    {
+        $method = new ReflectionMethod(HelpInjector::class, 'allPipedFeaturesEnabled');
+        // Unknown features are treated as disabled (not in the supportedFeatures array)
+        self::assertFalse($method->invoke(null, 'unknown-feature', []));
     }
 }
