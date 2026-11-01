@@ -7,10 +7,13 @@ namespace WyriHaximus\Makefiles\Composer\Installer;
 use WyriHaximus\Makefiles\Composer\SupportedFeatures;
 
 use function array_key_exists;
+use function file_exists;
+use function file_get_contents;
 use function in_array;
 use function is_array;
 use function is_bool;
 use function is_string;
+use function str_contains;
 use function str_ends_with;
 
 final class SupportedFeaturesResolver
@@ -20,14 +23,17 @@ final class SupportedFeaturesResolver
     }
 
     /**
-     * @param array<mixed> $json
+     * @param array<mixed>     $json
+     * @param non-empty-string $rootPackagePath
      *
      * @return array<string, bool>
      */
-    public static function resolve(array $json, Requirements $requirements): array
+    public static function resolve(array $json, Requirements $requirements, string $rootPackagePath = '.'): array
     {
         /** @var array<string, bool> $supportedFeatures */
         $supportedFeatures = SupportedFeatures::DEFAULTS;
+
+        $supportedFeatures = self::detectPackageOrProject($supportedFeatures, $json, $rootPackagePath);
 
         foreach ($requirements->withoutDev as $packageOrExtension) {
             if ($packageOrExtension === 'ext-parallel') {
@@ -70,6 +76,42 @@ final class SupportedFeaturesResolver
         }
 
         return $supportedFeatures;
+    }
+
+    /**
+     * @param array<string, bool> $supportedFeatures
+     * @param array<mixed>        $json
+     * @param non-empty-string    $rootPackagePath
+     *
+     * @return array<string, bool>
+     */
+    private static function detectPackageOrProject(array $supportedFeatures, array $json, string $rootPackagePath): array
+    {
+        if (self::isProjectType($json) || self::isProjectByWorkflow($rootPackagePath)) {
+            $supportedFeatures[SupportedFeatures::FEATURE_PROJECT] = true;
+            $supportedFeatures[SupportedFeatures::FEATURE_PACKAGE] = false;
+        }
+
+        return $supportedFeatures;
+    }
+
+    /** @param array<mixed> $json */
+    private static function isProjectType(array $json): bool
+    {
+        return array_key_exists('type', $json) && $json['type'] === 'project';
+    }
+
+    /** @param non-empty-string $rootPackagePath */
+    private static function isProjectByWorkflow(string $rootPackagePath): bool
+    {
+        $ciWorkflowPath = $rootPackagePath . '.github/workflows/ci.yaml';
+        if (! file_exists($ciWorkflowPath)) {
+            return false;
+        }
+
+        $content = file_get_contents($ciWorkflowPath);
+
+        return $content !== false && str_contains($content, 'project.yaml');
     }
 
     /** @param array<mixed> $json */

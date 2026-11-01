@@ -151,7 +151,7 @@ migrations-docs-fix: ## Migration task ####
 beta: ## Beta contrib ##*E*##
 hidden: ## Hidden ##U##
 MAKEFILE,
-            '',
+            '.',
             [
                 '@printf "\033[33mUsage:\033[0m\n"',
                 '@printf "  make [target]\n"',
@@ -179,7 +179,7 @@ MAKEFILE,
 
         yield 'builds migrations help with command banner' => [
             "help(migrations)\nmigrations-docs-fix: ## Migration task ####\n",
-            '',
+            '.',
             [
                 '@printf "%s\n" \' ._ _    o    _    ._    _.   _|_   o    _    ._     _\'',
                 '@printf "\033[33mUsage:\033[0m\n"',
@@ -190,7 +190,7 @@ MAKEFILE,
 
         yield 'skips malformed help lines' => [
             "broken-line-without-proper-format\nvalid: ## Valid ####\nhelp(main)\n",
-            '',
+            '.',
             ['@printf "  \033[32m%-32s\033[0m %s\n" \'valid\' \'Valid\'', '@printf "\033[33mUsage:\033[0m\n"'],
             ["'broken-line", 'help(main)', '| awk', "valid: ## Valid\\n"],
         ];
@@ -203,13 +203,14 @@ MAKEFILE,
         yield 'unknown placeholder' => ['no placeholders here', false];
     }
 
-    /** @return iterable<string, array{array<string, mixed>, Requirements, array<string, bool>}> */
+    /** @return iterable<string, array{array<string, mixed>, Requirements, string, array<string, bool>}> */
     public static function provideSupportedFeaturesResolverCases(): iterable
     {
-        yield 'defaults without overrides' => [[], new Requirements([], []), SupportedFeatures::DEFAULTS];
+        yield 'defaults without overrides' => [[], new Requirements([], []), '.', SupportedFeatures::DEFAULTS];
         yield 'ext-parallel' => [
             [],
             new Requirements([], ['ext-parallel']),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [
                 SupportedFeatures::FEATURE_MACOS => false,
                 SupportedFeatures::FEATURE_WINDOWS => false,
@@ -220,6 +221,7 @@ MAKEFILE,
         yield 'ext-pcntl' => [
             [],
             new Requirements([], ['ext-pcntl']),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [
                 SupportedFeatures::FEATURE_MACOS => false,
                 SupportedFeatures::FEATURE_WINDOWS => false,
@@ -229,12 +231,14 @@ MAKEFILE,
         yield 'php requirement without ext-pcntl keeps defaults' => [
             [],
             new Requirements([], ['php']),
+            '.',
             SupportedFeatures::DEFAULTS,
         ];
 
         yield 'ext-pcntl with other packages' => [
             [],
             new Requirements([], ['php', 'ext-pcntl']),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [
                 SupportedFeatures::FEATURE_MACOS => false,
                 SupportedFeatures::FEATURE_WINDOWS => false,
@@ -244,6 +248,7 @@ MAKEFILE,
         yield 'ext-parallel and ext-pcntl' => [
             [],
             new Requirements([], ['ext-parallel', 'ext-pcntl']),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [
                 SupportedFeatures::FEATURE_MACOS => false,
                 SupportedFeatures::FEATURE_WINDOWS => false,
@@ -263,6 +268,7 @@ MAKEFILE,
                 ],
             ],
             new Requirements([], []),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_UNIT_TESTS => false]),
         ];
 
@@ -278,6 +284,7 @@ MAKEFILE,
                 ],
             ],
             new Requirements([], []),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_UNIT_TESTS => false]),
         ];
 
@@ -294,6 +301,7 @@ MAKEFILE,
                 ],
             ],
             new Requirements([], []),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_UNIT_TESTS => false]),
         ];
 
@@ -304,6 +312,7 @@ MAKEFILE,
                 ],
             ],
             new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
         ];
 
@@ -314,12 +323,14 @@ MAKEFILE,
                 ],
             ],
             new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            '.',
             SupportedFeatures::DEFAULTS,
         ];
 
         yield 'ext-opentelemetry without autoload' => [
             [],
             new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            '.',
             SupportedFeatures::DEFAULTS,
         ];
 
@@ -330,6 +341,7 @@ MAKEFILE,
                 ],
             ],
             new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            '.',
             SupportedFeatures::DEFAULTS,
         ];
 
@@ -340,6 +352,7 @@ MAKEFILE,
                 ],
             ],
             new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            '.',
             SupportedFeatures::DEFAULTS,
         ];
 
@@ -350,6 +363,7 @@ MAKEFILE,
                 ],
             ],
             new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            '.',
             array_merge(SupportedFeatures::DEFAULTS, [SupportedFeatures::FEATURE_OPENTELEMETRY_INSTRUMENTATION => true]),
         ];
 
@@ -360,6 +374,7 @@ MAKEFILE,
                 ],
             ],
             new Requirements(['ext-opentelemetry'], []),
+            '.',
             SupportedFeatures::DEFAULTS,
         ];
 
@@ -375,8 +390,105 @@ MAKEFILE,
                 ],
             ],
             new Requirements(['ext-opentelemetry'], ['ext-opentelemetry']),
+            '.',
             SupportedFeatures::DEFAULTS,
         ];
+
+        yield 'type project sets project feature' => [
+            ['type' => 'project'],
+            new Requirements([], []),
+            '.',
+            array_merge(SupportedFeatures::DEFAULTS, [
+                SupportedFeatures::FEATURE_PROJECT => true,
+                SupportedFeatures::FEATURE_PACKAGE => false,
+            ]),
+        ];
+
+        yield 'type project overrides package default' => [
+            ['type' => 'project', 'license' => 'MIT'],
+            new Requirements([], []),
+            '.',
+            array_merge(SupportedFeatures::DEFAULTS, [
+                SupportedFeatures::FEATURE_PROJECT => true,
+                SupportedFeatures::FEATURE_PACKAGE => false,
+            ]),
+        ];
+
+        yield 'manual override can enable package for project' => [
+            [
+                'type' => 'project',
+                'extra' => [
+                    'wyrihaximus' => [
+                        'supported-features' => [SupportedFeatures::FEATURE_PACKAGE => true],
+                    ],
+                ],
+            ],
+            new Requirements([], []),
+            '.',
+            array_merge(SupportedFeatures::DEFAULTS, [
+                SupportedFeatures::FEATURE_PROJECT => true,
+                SupportedFeatures::FEATURE_PACKAGE => true,
+            ]),
+        ];
+    }
+
+    #[Test]
+    public function supportedFeaturesResolveDetectsProjectByWorkflow(): void
+    {
+        $root = $this->getTmpDir() . 'workflow-project/';
+        mkdir($root . '.github/workflows', 0755, true);
+        file_put_contents($root . '.github/workflows/ci.yaml', 'uses: WyriHaximus/github-workflows/.github/workflows/project.yaml');
+
+        $result = SupportedFeaturesResolver::resolve([], new Requirements([], []), $root);
+        self::assertTrue($result[SupportedFeatures::FEATURE_PROJECT]);
+        self::assertFalse($result[SupportedFeatures::FEATURE_PACKAGE]);
+    }
+
+    #[Test]
+    public function supportedFeaturesResolveDetectsPackageByWorkflow(): void
+    {
+        $root = $this->getTmpDir() . 'workflow-package/';
+        mkdir($root . '.github/workflows', 0755, true);
+        file_put_contents($root . '.github/workflows/ci.yaml', 'uses: WyriHaximus/github-workflows/.github/workflows/package.yaml');
+
+        $result = SupportedFeaturesResolver::resolve([], new Requirements([], []), $root);
+        self::assertFalse($result[SupportedFeatures::FEATURE_PROJECT]);
+        self::assertTrue($result[SupportedFeatures::FEATURE_PACKAGE]);
+    }
+
+    #[Test]
+    public function supportedFeaturesResolveDetectsPackageByWorkflowWithLicense(): void
+    {
+        $root = $this->getTmpDir() . 'workflow-package-license/';
+        mkdir($root . '.github/workflows', 0755, true);
+        file_put_contents($root . '.github/workflows/ci.yaml', 'uses: WyriHaximus/github-workflows/.github/workflows/package.yaml');
+
+        $result = SupportedFeaturesResolver::resolve(['license' => 'MIT'], new Requirements([], []), $root);
+        self::assertFalse($result[SupportedFeatures::FEATURE_PROJECT]);
+        self::assertTrue($result[SupportedFeatures::FEATURE_PACKAGE]);
+    }
+
+    #[Test]
+    public function supportedFeaturesResolveProjectWorkflowOverridesLicense(): void
+    {
+        $root = $this->getTmpDir() . 'workflow-project-license/';
+        mkdir($root . '.github/workflows', 0755, true);
+        file_put_contents($root . '.github/workflows/ci.yaml', 'uses: WyriHaximus/github-workflows/.github/workflows/project.yaml');
+
+        $result = SupportedFeaturesResolver::resolve(['license' => 'MIT'], new Requirements([], []), $root);
+        self::assertTrue($result[SupportedFeatures::FEATURE_PROJECT]);
+        self::assertFalse($result[SupportedFeatures::FEATURE_PACKAGE]);
+    }
+
+    #[Test]
+    public function supportedFeaturesResolveWithNoWorkflowKeepsDefaults(): void
+    {
+        $root = $this->getTmpDir() . 'no-workflow/';
+        mkdir($root);
+
+        $result = SupportedFeaturesResolver::resolve([], new Requirements([], []), $root);
+        self::assertFalse($result[SupportedFeatures::FEATURE_PROJECT]);
+        self::assertTrue($result[SupportedFeatures::FEATURE_PACKAGE]);
     }
 
     /** @return iterable<string, array{string, string}> */
@@ -581,8 +693,8 @@ MAKEFILE,
         $features = SupportedFeatures::DEFAULTS;
 
         self::assertSame(
-            '@echo "[\"code-style\",\"composer-dependency-checkers\",\"linux\",\"macos\",\"static-analysis\",\"unit-tests\",\"windows\"]" ## Count: 7' . "\n"
-            . '["code-style","composer-dependency-checkers","linux","macos","static-analysis","unit-tests","windows"]',
+            '@echo "[\"code-style\",\"composer-dependency-checkers\",\"linux\",\"macos\",\"package\",\"static-analysis\",\"unit-tests\",\"windows\"]" ## Count: 8' . "\n"
+            . '["code-style","composer-dependency-checkers","linux","macos","package","static-analysis","unit-tests","windows"]',
             SupportedFeaturesInjector::inject(
                 "supported-features(list)\nsupported-features(raw)",
                 $features,
@@ -592,12 +704,13 @@ MAKEFILE,
 
     /**
      * @param array<string, mixed> $json
+     * @param non-empty-string     $rootPackagePath
      * @param array<string, bool>  $expected
      */
     #[Test]
     #[DataProvider('provideSupportedFeaturesResolverCases')]
-    public function supportedFeaturesResolve(array $json, Requirements $requirements, array $expected): void
+    public function supportedFeaturesResolve(array $json, Requirements $requirements, string $rootPackagePath, array $expected): void
     {
-        self::assertSame($expected, SupportedFeaturesResolver::resolve($json, $requirements));
+        self::assertSame($expected, SupportedFeaturesResolver::resolve($json, $requirements, $rootPackagePath));
     }
 }
