@@ -51,3 +51,6 @@ migrations-docs-enrich-qa-wordlists-with-php-symbols: #### Merge PHP symbol and 
 
 migrations-docs-create-vale-vocab-symlink-if-not-exists: #### Create WyriHaximus Vale vocab symlink when missing ##*I*##
 	($(DOCKER_RUN) php -r '$$link = "etc/qa/vale/styles/config/vocabularies/WyriHaximus/accept.txt"; if (is_link($$link)) {exit;} if (!is_dir("etc/qa")) {mkdir("etc/qa", 0777, true);} if (!is_dir(dirname($$link))) {mkdir(dirname($$link), 0777, true);} symlink("../../../../../vale-vocab.txt", $$link);' || true)
+
+migrations-docs-update-readme-github-actions-badge-yml-to-yaml: #### Update GitHub Actions badge workflow file extension from `.yml` to `.yaml` in `README.md` ##*I*##
+	($(DOCKER_RUN) php -r '$$readmeFile = "README.md"; if (!file_exists($$readmeFile)) {exit;} $$readmeContents = file_get_contents($$readmeFile); if (!is_string($$readmeContents)) {exit;} if (str_contains($$readmeContents, "[![") && str_contains($$readmeContents, "badge.svg")) { $$readmeContents = preg_replace_callback("#(https://github\.com/[^/\s\)]+/[^/\s\)]+/actions/workflows/[^/\s\)\?]+)\.yml#", function($$m) { return $$m[1] . ".yaml"; }, $$readmeContents); file_put_contents($$readmeFile, $$readmeContents); }' || true)
