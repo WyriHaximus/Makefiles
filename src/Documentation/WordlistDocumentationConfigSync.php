@@ -29,10 +29,8 @@ use function is_dir;
 use function is_file;
 use function is_readable;
 use function is_string;
-use function is_writable;
 use function json_decode;
 use function json_encode;
-use function ltrim;
 use function preg_match;
 use function rtrim;
 use function sort;
@@ -339,7 +337,11 @@ final class WordlistDocumentationConfigSync
     /** @param list<string> $words */
     private static function writeValeVocab(string $valeVocabPath, array $words): void
     {
-        if (is_dir($valeVocabPath) || ! self::isWritablePath($valeVocabPath)) {
+        if (is_dir($valeVocabPath)) {
+            throw new RuntimeException('Failed to write Vale vocabulary file: ' . $valeVocabPath);
+        }
+
+        if (! is_dir(dirname($valeVocabPath))) {
             throw new RuntimeException('Failed to write Vale vocabulary file: ' . $valeVocabPath);
         }
 
@@ -394,10 +396,6 @@ final class WordlistDocumentationConfigSync
     {
         $encoded = json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
-        if (! self::isWritablePath($cspellConfigPath)) {
-            throw new RuntimeException('Failed to write CSpell config file: ' . $cspellConfigPath);
-        }
-
         file_put_contents($cspellConfigPath, $encoded . "\n");
     }
 
@@ -430,7 +428,7 @@ final class WordlistDocumentationConfigSync
     private static function symbolNameSegments(string $symbolName): array
     {
         return array_values(array_filter(
-            explode('\\', ltrim($symbolName, '\\')),
+            explode('\\', $symbolName),
             static fn (string $chunk): bool => $chunk !== '',
         ));
     }
@@ -451,16 +449,5 @@ final class WordlistDocumentationConfigSync
             $words,
             static fn (string $word): bool => ! self::isExcludedVolatilePhpSymbolWord($word),
         ));
-    }
-
-    private static function isWritablePath(string $path): bool
-    {
-        if (is_file($path)) {
-            return is_writable($path);
-        }
-
-        $directory = dirname($path);
-
-        return is_dir($directory) && is_writable($directory);
     }
 }

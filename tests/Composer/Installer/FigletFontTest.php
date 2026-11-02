@@ -124,6 +124,36 @@ final class FigletFontTest extends TestCase
                 '  \\__',
             ],
         ];
+
+        yield 'two characters have exactly one space separator' => [
+            'ab',
+            [
+                '',
+                '  _.   |_',
+                ' (_|   |_)',
+                '',
+            ],
+        ];
+
+        yield 'three characters have separators between each pair' => [
+            'abc',
+            [
+                '',
+                '  _.   |_     _',
+                ' (_|   |_)   (_',
+                '',
+            ],
+        ];
+
+        yield 'single character has no trailing space' => [
+            'a',
+            [
+                '',
+                '  _.',
+                ' (_|',
+                '',
+            ],
+        ];
     }
 
     #[Test]

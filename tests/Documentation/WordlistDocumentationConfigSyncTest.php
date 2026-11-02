@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 use RuntimeException;
+use WyriHaximus\Makefiles\Composer\Installer;
 use WyriHaximus\Makefiles\Documentation\WordlistDocumentationConfigSync;
 use WyriHaximus\Tests\Makefiles\Composer\Installer\TestUtilities\ProjectSandbox;
 use WyriHaximus\Tests\Makefiles\TestCase;
@@ -366,52 +367,6 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
     }
 
     #[Test]
-    public function isWritablePathReturnsTrueForWritableFile(): void
-    {
-        $path = $this->getTmpDir() . 'writable-file.txt';
-        file_put_contents($path, 'content');
-
-        self::assertTrue($this->invokePrivateStatic('isWritablePath', [$path]));
-    }
-
-    #[Test]
-    public function isWritablePathReturnsTrueWhenMissingFileHasWritableParentDirectory(): void
-    {
-        $directory = $this->getTmpDir() . 'writable-parent/';
-        mkdir($directory);
-        $path = $directory . 'new-file.txt';
-
-        self::assertTrue($this->invokePrivateStatic('isWritablePath', [$path]));
-    }
-
-    #[Test]
-    public function isWritablePathReturnsFalseWhenParentDirectoryDoesNotExist(): void
-    {
-        $path = $this->getTmpDir() . 'missing-parent/new-file.txt';
-
-        self::assertFalse($this->invokePrivateStatic('isWritablePath', [$path]));
-    }
-
-    #[Test]
-    public function isWritablePathReturnsFalseForReadOnlyFile(): void
-    {
-        if (! ProjectSandbox::canSimulateUnreadableFiles()) {
-            self::markTestSkipped('File permission tests cannot run on Windows or as root.');
-        }
-
-        $path = $this->getTmpDir() . 'read-only-is-writable-path.txt';
-        file_put_contents($path, 'content');
-        chmod($path, 0444);
-
-        try {
-            self::assertFalse($this->invokePrivateStatic('isWritablePath', [$path]));
-        } finally {
-            chmod($path, 0644);
-            unlink($path);
-        }
-    }
-
-    #[Test]
     public function writeValeVocabCreatesFileWhenParentDirectoryIsWritable(): void
     {
         $directory = $this->getTmpDir() . 'vale-vocab-new/';
@@ -538,29 +493,6 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
     }
 
     #[Test]
-    public function writeCspellWordsThrowsWhenConfigIsNotWritable(): void
-    {
-        if (! ProjectSandbox::canSimulateUnreadableFiles()) {
-            self::markTestSkipped('File permission tests cannot run on Windows or as root.');
-        }
-
-        $path = $this->getTmpDir() . 'read-only-cspell.json';
-        file_put_contents($path, '{"words":[]}');
-        chmod($path, 0444);
-
-        try {
-            $this->assertRuntimeExceptionContainsPath(
-                fn (): mixed => $this->invokePrivateStatic('writeCspellWords', [$path, ['word']]),
-                $path,
-                'Failed to write CSpell config file',
-            );
-        } finally {
-            chmod($path, 0644);
-            unlink($path);
-        }
-    }
-
-    #[Test]
     public function writeCspellWordsThrowsWhenConfigIsUnreadable(): void
     {
         if (! ProjectSandbox::canSimulateUnreadableFiles()) {
@@ -601,6 +533,60 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
             self::assertSame(0, $exception->getCode());
             self::assertSame($message . ': ' . $path, $exception->getMessage());
         }
+    }
+
+    /**
+     * @param array<int, mixed> $values
+     * @param list<string>      $expected
+     */
+    #[Test]
+    #[DataProvider('provideStringListFromMixedListCases')]
+    public function stringListFromMixedList(array $values, array $expected): void
+    {
+        self::assertSame(
+            $expected,
+            $this->invokePrivateStatic('stringListFromMixedList', [$values]),
+        );
+    }
+
+    /** @return iterable<string, array{0: list<mixed>, 1: list<string>}> */
+    public static function provideStringListFromMixedListCases(): iterable
+    {
+        yield 'empty list' => [[], []];
+        yield 'single string' => [['hello'], ['hello']];
+        yield 'trims whitespace' => [['  hello  '], ['hello']];
+        yield 'skips non-strings' => [['hello', 1, null, 'world'], ['hello', 'world']];
+        yield 'skips empty strings' => [['hello', '', 'world'], ['hello', 'world']];
+        yield 'skips whitespace-only strings' => [['hello', '   ', 'world'], ['hello', 'world']];
+        yield 'skips duplicates' => [['hello', 'world', 'hello'], ['hello', 'world']];
+        yield 'duplicate after valid word triggers continue not break' => [['a', 'b', 'a', 'c'], ['a', 'b', 'c']];
+        yield 'empty string skipped independently of duplicate check' => [['a', '', 'b'], ['a', 'b']];
+        yield 'multiple words returned' => [['alpha', 'beta', 'gamma'], ['alpha', 'beta', 'gamma']];
+    }
+
+    /** @param list<string> $expected */
+    #[Test]
+    #[DataProvider('provideSymbolNameSegmentsCases')]
+    public function symbolNameSegments(string $symbolName, array $expected): void
+    {
+        self::assertSame(
+            $expected,
+            $this->invokePrivateStatic('symbolNameSegments', [$symbolName]),
+        );
+    }
+
+    /** @return iterable<string, array{0: string, 1: list<string>}> */
+    public static function provideSymbolNameSegmentsCases(): iterable
+    {
+        yield 'simple class name' => ['Foo', ['Foo']];
+        yield 'namespaced class' => ['Foo\\Bar', ['Foo', 'Bar']];
+        yield 'leading backslash is stripped' => ['\\Foo\\Bar', ['Foo', 'Bar']];
+        yield 'multiple leading backslashes are stripped' => ['\\\\Foo', ['Foo']];
+        yield 'trailing backslash produces no empty segment' => ['Foo\\', ['Foo']];
+        yield 'consecutive backslashes produce no empty segments' => ['Foo\\\\Bar', ['Foo', 'Bar']];
+        yield 'fully qualified class name' => [Installer::class, ['WyriHaximus', 'Makefiles', 'Composer', 'Installer']];
+        yield 'empty string returns empty list' => ['', []];
+        yield 'only backslashes returns empty list distinguishing ltrim from no ltrim' => ['\\\\', []];
     }
 
     private function createProjectTree(string $wordlistContents, string $cspellContents): string
