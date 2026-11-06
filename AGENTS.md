@@ -17,8 +17,11 @@ Before doing anything read this file to ensure you are up to date with it.
 - Need something custom that is not in the list? Use `make run "YOUR COMMAND HERE"` to run a command in the container and run whatever you require there.
 - If a package needs custom `make` commands, put them in `etc/Makefile`, then run `make install` to make them available through the root `Makefile`.
 - Always split tasks up in small chunks and feed those to sub agents, then collect what comes out of that, make logical groups for the next set of tasks to be split over subagents.
+- When using shell commands like `rm`, `mv`, or `cp` and all paths are within the repo, run them via `make run` to ensure they execute inside the container.
+- When making `API` calls prefer using `MCP` tools over `cURL`.
 
 ## Flow
+- Always check `AGENTS.md` when starting on a task.
 - After each logical block of changes made ensure `make contrib` passes.
 - Before you return to the uses run `make` to ensure all QA checks pass.
 - Use `make unit-testing-filter TESTCLASSNAME_OR_TESTMETHODNAME` to run a specific test.
@@ -36,6 +39,9 @@ Before doing anything read this file to ensure you are up to date with it.
 - Search existing code for classes/methods you can use instead of writing your own.
 
 ## Markdown
+- Always use Markdown in comments to improve readability
+- When referring to code/files/lines/commits, always link to them
+- Always put class names/file names/line numbers/commit SHAs in backticks
 - Always link every reference that has a URL (`[label](url)`); never bare backticks or plain text alone
 - Composer packages → GitHub repo (resolve via Packagist); docs and specs → canonical URL
 
