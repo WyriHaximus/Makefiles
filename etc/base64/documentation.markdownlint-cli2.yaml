@@ -6,7 +6,7 @@ globs:
 ignores:
   - "var/**"
   - "vendor/**"
-  - ".git/**"
+  - ".*/**"
 config:
   MD004: false
   MD007: false
