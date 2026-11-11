@@ -181,7 +181,7 @@ Custom targets in `etc/Makefile` can use the same markers so `make install` rege
 
 The MIT License (MIT)
 
-Copyright (c) 2026 Cees-Jan Kiewiet
+Copyright © 2026 Cees-Jan Kiewiet
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

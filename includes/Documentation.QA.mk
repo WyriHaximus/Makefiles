@@ -10,10 +10,12 @@ documentation-links: ## Check documentation links ##*K*##
 	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_LYCHEE) --config etc/qa/lychee.toml .
 
 documentation-typos: ## Check documentation spelling ##*K*##
-	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json --no-progress --no-must-find-files $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.idea/*" -not -path "./etc/qa/vale/*")
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_CSPELL) --config etc/qa/cspell.json --no-progress --no-must-find-files $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.*/*" -not -path "./etc/qa/vale/*")
+
+documentation-vale-sync: #### Sync Vale style packages ##*I*##
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) sync --config etc/qa/vale.ini
 
 documentation-vale: ## Lint documentation prose (Vale) ##*K*##
-	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) sync --config etc/qa/vale.ini
-	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini --no-global $$(find . -name "*.md" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.git/*" -not -path "./.idea/*" -not -path "./etc/qa/vale/*")
+	$(DOCKER_RUN_DOCUMENTATION) $(IMAGE_VALE) --config etc/qa/vale.ini --no-global $$(find . -name "*.md" -not -name "LICENSE" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.*/*" -not -path "./etc/qa/vale/*")
 
 documentation-qa: documentation-markdownlint documentation-links documentation-typos documentation-vale ## Run all documentation QA checks ##*E*##

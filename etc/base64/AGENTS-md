@@ -29,12 +29,12 @@ Before doing anything read this file to ensure you are up to date with it.
 - If `composer.lock` is out of sync with `composer.json`, run `make update`.
 
 ## Writing code
-- Keep things simple, once done implementing a feature, iterate on improving it. Less code is more.
-- Make sure the code is readable and easy to understand.
+- Keep things straightforward, once done implementing a feature, iterate on improving it. Less code is more.
+- Make sure the code is readable and clear.
 - Prefer a logical block of code to be within one screen size over splitting it up in multiple smaller functions.
 - Make a class static if it doesn't hold state.
 - Put classes in logical folders.
-- Once done writing code iterate of it to make sure it's easy to understand and maintain, that it's easy to test, and that it doesn't duplicate code.
+- Once done writing code iterate of it to make sure it's clear to understand and maintain, that it's straightforward to test, and that it doesn't duplicate code.
 - Search existing code for examples of how to do things.
 - Search existing code for classes/methods you can use instead of writing your own.
 
@@ -51,9 +51,9 @@ Before doing anything read this file to ensure you are up to date with it.
 - Test the edge cases (PHPUnit)
 - Test the fuzzy cases (PHPUnit)
 - 100% coverage is required (PHPUnit)
-- 100% MSI is required (mutation testing (InfectionPHP))
+- 100% MSI is required (mutation testing ([`InfectionPHP`](https://infection.github.io/)))
 - 100% type coverage is required (PHPStan)
-- Use dataproviders wherever possible (PHPUnit)
+- Use [`dataproviders`](https://phpunit.readthedocs.io/en/13.0/writing-tests-for-phpunit.html#data-providers) wherever possible (PHPUnit)
 - Prefer creating subs and spies over mocks
 - Look at [`wyrihaximus/test-utilities`](https://github.com/WyriHaximus/php-test-utilities) and [`wyrihaximus/async-test-utilities`](https://github.com/WyriHaximus/php-async-test-utilities) for some useful helpers
 - When tests are known to take longer than 10 seconds, when possible use `make unit-testing-filter TESTCLASSNAME_OR_TESTMETHODNAME` to run them in parallel across subagents
@@ -85,7 +85,6 @@ Before doing anything read this file to ensure you are up to date with it.
 - Never call, attempt or even consider to use `git commit`
 - Never call, attempt or even consider to use `git push`
 - Any command not in the allowed commands list
-- Never, ever, ever use ` — ` in documentation!!!!!
 
 ## Forbidden actions
 - Create dead/unused methods/classes/functions/code
