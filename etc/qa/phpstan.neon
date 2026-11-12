@@ -12,7 +12,7 @@ parameters:
 			path: ../../tests/Composer/Installer/TestUtilities/UnreadableStreamWrapper.php
 		-
 			identifier: shipmonk.deadMethod
-			message: '#^Unused WyriHaximus\\Makefiles\\Documentation\\WordlistDocumentationConfigSync::(sync|enrichQaWordlistsWithPhpSymbols|addWordsToQaWordlists) \(all usages excluded by tests excluder\)$#'
+			message: '#^Unused WyriHaximus\\Makefiles\\Documentation\\WordlistDocumentationConfigSync::(sync|enrichQaWordlistsWithPhpSymbols|syncWordlistToQaWordlists|addWordsToQaWordlists) \(all usages excluded by tests excluder\)$#'
 			path: ../../src/Documentation/WordlistDocumentationConfigSync.php
 	ergebnis:
 		noExtends:

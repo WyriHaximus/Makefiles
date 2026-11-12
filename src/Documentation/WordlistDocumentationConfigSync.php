@@ -90,6 +90,27 @@ final class WordlistDocumentationConfigSync
     }
 
     /**
+     * Merge `etc/wordlist.txt` into `etc/qa/cspell.json` and `etc/qa/vale-vocab.txt`.
+     * Runs from `migrations-docs-sync-wordlist-to-qa-wordlists` after the enforce steps on install and update.
+     */
+    public static function syncWordlistToQaWordlists(string $projectRoot): void
+    {
+        $root = rtrim($projectRoot, '/\\');
+
+        $wordlistPath = $root . DIRECTORY_SEPARATOR . self::WORDLIST_RELATIVE_PATH;
+        if (! is_file($wordlistPath)) {
+            return;
+        }
+
+        $words = self::readWordlist($wordlistPath);
+        if ($words === []) {
+            return;
+        }
+
+        self::mergeAdditionalWordsIntoQaWordlists($root, $words);
+    }
+
+    /**
      * Merge custom spellings into `etc/qa/cspell.json` and `etc/qa/vale-vocab.txt`.
      * Duplicate and empty strings are ignored; the `words` list and Vale vocab stay sorted.
      */
