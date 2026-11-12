@@ -295,6 +295,70 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
     }
 
     #[Test]
+    public function syncWordlistToQaWordlistsMergesWordlistIntoQaFiles(): void
+    {
+        $root = $this->getTmpDir() . 'sync-wordlist-to-qa/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/wordlist.txt', "Loggly\n\nLoggly\nAcme\n");
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["base"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "base\n");
+
+        WordlistDocumentationConfigSync::syncWordlistToQaWordlists($root);
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertSame(['Acme', 'Loggly', 'base'], $cspell['words']);
+
+        $valeLines = explode("\n", trim((string) file_get_contents($root . 'etc/qa/vale-vocab.txt')));
+        self::assertSame(['Acme', 'Loggly', 'base'], $valeLines);
+    }
+
+    #[Test]
+    public function syncWordlistToQaWordlistsIsNoOpWhenWordlistIsMissing(): void
+    {
+        $root = $this->getTmpDir() . 'sync-wordlist-missing/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["base"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "base\n");
+
+        WordlistDocumentationConfigSync::syncWordlistToQaWordlists($root);
+
+        self::assertSame('{"words":["base"]}', trim((string) file_get_contents($root . 'etc/qa/cspell.json')));
+        self::assertSame("base\n", file_get_contents($root . 'etc/qa/vale-vocab.txt'));
+    }
+
+    #[Test]
+    public function syncWordlistToQaWordlistsIsNoOpWhenWordlistIsEmpty(): void
+    {
+        $root = $this->getTmpDir() . 'sync-wordlist-empty/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/wordlist.txt', "\n\n  \n");
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["base"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "base\n");
+
+        WordlistDocumentationConfigSync::syncWordlistToQaWordlists($root);
+
+        self::assertSame('{"words":["base"]}', trim((string) file_get_contents($root . 'etc/qa/cspell.json')));
+        self::assertSame("base\n", file_get_contents($root . 'etc/qa/vale-vocab.txt'));
+    }
+
+    #[Test]
+    public function syncWordlistToQaWordlistsHandlesTrailingSeparators(): void
+    {
+        $root = $this->getTmpDir() . 'sync-wordlist-trailing/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/wordlist.txt', "Custom\n");
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["base"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "base\n");
+
+        WordlistDocumentationConfigSync::syncWordlistToQaWordlists($root . '///');
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertSame(['Custom', 'base'], $cspell['words']);
+    }
+
+    #[Test]
     public function addWordsToQaWordlistsMergesSortedIntoCspellAndValeVocab(): void
     {
         $root = $this->getTmpDir() . 'add-qa-words/';
