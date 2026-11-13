@@ -55,24 +55,30 @@ else
         endif
         DOCKER_COMMON_NON_INTERACTIVE_OPS:=-e OTEL_PHP_FIBERS_ENABLED="${OTEL_PHP_FIBERS_ENABLED}"
         DOCKER_COMMON_INTERACTIVE_OPS:=-e OTEL_PHP_FIBERS_ENABLED="false"
+        ifneq ("$(wildcard /var/run/docker.sock)","")
+            DOCKER_SOCKET_OPS:=-v "/var/run/docker.sock:/var/run/docker.sock"
+            DOCKER_SOCKET_GID:=$(shell stat -c '%g' /var/run/docker.sock 2>/dev/null || stat -f '%Ng' /var/run/docker.sock 2>/dev/null || echo 997)
+            DOCKER_SOCKET_SECURITY_OPS:=--user="`id -u`:$(DOCKER_SOCKET_GID)"
+        else
+            DOCKER_SOCKET_OPS:=
+            DOCKER_SOCKET_SECURITY_OPS:=
+            DOCKER_SOCKET_GID:=
+        endif
         ifeq ("$(NEEDS_DOCKER_SOCKET)","TRUE")
             ifneq ("$(wildcard /var/run/docker.sock)","")
                 DOCKER_SECURITY_OPS:=
-                DOCKER_SOCKET_OPS:=-v "/var/run/docker.sock:/var/run/docker.sock"
                 DOCKER_SOCKET_CONTAINER_NAME_SUFFIX:=-root
             else
                 DOCKER_SECURITY_OPS:=${DOCKER_DEFAULT_SECURITY_OPS}
-                DOCKER_SOCKET_OPS:=
                 DOCKER_SOCKET_CONTAINER_NAME_SUFFIX:=
             endif
         else
             DOCKER_SECURITY_OPS:=${DOCKER_DEFAULT_SECURITY_OPS}
-            DOCKER_SOCKET_OPS:=
             DOCKER_SOCKET_CONTAINER_NAME_SUFFIX:=
         endif
         DOCKER_RUN:=docker run --rm -i ${DOCKER_SECURITY_OPS} ${DOCKER_COMMON_NON_INTERACTIVE_OPS} ${DOCKER_COMMON_OPS} "${CONTAINER_NAME}"
         DOCKER_RUN_WITHOUT_NETWORK_FOR_COMPOSER:=docker run --rm -i ${DOCKER_SECURITY_OPS} ${DOCKER_COMMON_NON_INTERACTIVE_OPS} -e COMPOSER_DISABLE_NETWORK="1" ${DOCKER_COMMON_OPS} "${CONTAINER_NAME}"
-        DOCKER_RUN_WITH_SOCKET:=docker run --rm -i ${DOCKER_SECURITY_OPS} ${DOCKER_COMMON_NON_INTERACTIVE_OPS} ${DOCKER_COMMON_OPS} ${DOCKER_SOCKET_OPS} "${CONTAINER_NAME}${DOCKER_SOCKET_CONTAINER_NAME_SUFFIX}"
+        DOCKER_RUN_WITH_SOCKET:=docker run --rm -i ${DOCKER_SOCKET_SECURITY_OPS} ${DOCKER_COMMON_NON_INTERACTIVE_OPS} ${DOCKER_COMMON_OPS} ${DOCKER_SOCKET_OPS} "${CONTAINER_NAME}${DOCKER_SOCKET_CONTAINER_NAME_SUFFIX}"
         ifeq ($(TTY_AVAILABLE),0)
             DOCKER_SHELL:=docker run --rm -it ${DOCKER_SECURITY_OPS} ${DOCKER_COMMON_NON_INTERACTIVE_OPS} ${DOCKER_COMMON_OPS} "${CONTAINER_NAME}"
             DOCKER_INTERACTIVE_SHELL:=docker run --rm -it ${DOCKER_SECURITY_OPS} ${DOCKER_COMMON_INTERACTIVE_OPS} ${DOCKER_COMMON_OPS} "${CONTAINER_NAME_INTERACTIVE_SHELL}"
@@ -101,7 +107,15 @@ else
 endif
 INFECTION_THREADS_CLI=$(if $(filter 1,$(INFECTION_CONFIG_HAS_THREADS)),,--threads=$(if $(filter TRUE,$(IN_CI)),1,$(THREADS)))
 
-DOCKER_RUN_DOCUMENTATION=docker run --rm -i $(DOCKER_DEFAULT_SECURITY_OPS) $(DOCKER_WORKSPACE_BIND_OPS)
+ifeq ("$(IN_DOCKER)","TRUE")
+    ifneq ("$(wildcard /var/run/docker.sock)","")
+        DOCKER_RUN_DOCUMENTATION=docker run --rm -i --user="`id -u`:`id -g`" $(DOCKER_WORKSPACE_BIND_OPS)
+    else
+        DOCKER_RUN_DOCUMENTATION=
+    endif
+else
+    DOCKER_RUN_DOCUMENTATION=docker run --rm -i $(DOCKER_DEFAULT_SECURITY_OPS) $(DOCKER_WORKSPACE_BIND_OPS)
+endif
 
 ## Run everything extra points
 include includes/All.mk
