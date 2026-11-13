@@ -116,7 +116,12 @@ final class TaskListInjector
         foreach ($tasks as $taskTarget => $taskList) {
             $jsonTaskList = json_encode($taskList, JSON_THROW_ON_ERROR);
 
-            $makefileContents = str_replace('make-list(' . $taskTarget . ')', '$(MAKE) ' . implode(' ', $taskList) . ' ## Count: ' . count($taskList), $makefileContents);
+            if ($taskTarget === 'on-install-or-update' && $taskList !== []) {
+                $makefileContents = str_replace('make-list(' . $taskTarget . ')', '$(DOCKER_RUN_WITH_SOCKET) make ' . implode(' ', $taskList) . ' ## Count: ' . count($taskList), $makefileContents);
+            } else {
+                $makefileContents = str_replace('make-list(' . $taskTarget . ')', '$(MAKE) ' . implode(' ', $taskList) . ' ## Count: ' . count($taskList), $makefileContents);
+            }
+
             $makefileContents = str_replace('task-list(' . $taskTarget . ')', '@echo "' . str_replace('"', '\"', $jsonTaskList) . '" ## Count: ' . count($taskList), $makefileContents);
         }
 

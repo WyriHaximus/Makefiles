@@ -194,7 +194,7 @@ final class DirectDockerDetector
         /** @var list<string> $variableNames */
         $variableNames = [];
         preg_match_all(
-            '/^([A-Z_][A-Z0-9_]*)(?:[:?+]?=)(.+)$/m',
+            '/^\s*([A-Z_][A-Z0-9_]*)(?:[:?+]?=)(.+)$/m',
             $makefileContents,
             $matches,
         );

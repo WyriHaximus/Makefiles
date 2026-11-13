@@ -91,7 +91,6 @@ Before doing anything read this file to ensure you are up to date with it.
 - Using the `assert` function
 - Assigning a property to a variable without assigning a new value to it
 - Never update `Makefile` or `AGENTS.md` outside [`wyrihaximus/makefiles`](https://github.com/WyriHaximus/Makefiles); suggest changes to that repository instead
-
 # Makefiles package (etc/)
 
 ## Config migrations

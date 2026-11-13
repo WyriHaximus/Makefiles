@@ -173,7 +173,7 @@ MAKEFILE;
         $expected = <<<'MAKEFILE'
 $(MAKE) alpha gamma zeta eta theta docker-task ## Count: 6
 @echo "[\"alpha\",\"gamma\",\"zeta\",\"eta\",\"theta\",\"docker-task\"]" ## Count: 6
-$(MAKE) alpha beta docker-task ## Count: 3
+$(DOCKER_RUN_WITH_SOCKET) make alpha beta docker-task ## Count: 3
 ALL_HAS_DIRECT_DOCKER_TASKS=TRUE
 alpha: ## all ##*AI*##
 beta: #### dep ##*I*##
@@ -447,7 +447,7 @@ $(MAKE) two-hash-i ## Count: 1
 @echo "[\"two-hash-i\"]" ## Count: 1
 $(MAKE)  ## Count: 0
 @echo "[]" ## Count: 0
-$(MAKE) two-hash-i four-hash-i ## Count: 2
+$(DOCKER_RUN_WITH_SOCKET) make two-hash-i four-hash-i ## Count: 2
 @echo "[\"two-hash-i\",\"four-hash-i\"]" ## Count: 2
 two-hash-i: ## two ##*I*##
 four-hash-i: #### four ##*I*##
