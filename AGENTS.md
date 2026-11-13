@@ -100,3 +100,7 @@ When an existing consumer file may lack a new key, prefer **one migration target
 Do not add PHP classes for this. Update `etc/base64/` and run `make install` to verify migrations and Makefile task lists. New checkouts get the full file from `migrations-*-create-*-if-not-exists`.
 
 Migration `####` help text must not contain `=` (it breaks task-list injection into `on-install-or-update`).
+
+# Specific rules
+
+* Never edit the `Makefile` in the root, always run `make install` to rebuild it
