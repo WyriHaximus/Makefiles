@@ -6,3 +6,8 @@ migrations-docs-update-agents-template-phpunit-version: #### Update PHPUnit vers
 
 after-renovate: ## Tasks to run after Renovate updates dependencies; ensuring Makefile is updated with the latest changes ####
 	$(DOCKER_RUN) sh -ec 'GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$$(pwd)" composer install --no-scripts && composer run-script pre-autoload-dump && make documentation-wordlist-sync'
+
+composer-run-script-pre-autoload-dump: #### composer run-script pre-autoload-dump ##*I*##
+ifeq ("$(ON_INSTALL_OR_UPDATE_HAS_DIRECT_DOCKER_TASKS)","TRUE")
+	$(DOCKER_RUN) composer run-script pre-autoload-dump
+endif
