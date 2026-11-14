@@ -69,6 +69,7 @@ backward-compatibility-check-raw: ## Check code for backwards incompatible chang
 install: ### Install dependencies ####
 ifeq ("$(ON_INSTALL_OR_UPDATE_HAS_DIRECT_DOCKER_TASKS)","TRUE")
 	$(DOCKER_SHELL) composer install --no-scripts
+	$(DOCKER_RUN) composer run-script pre-autoload-dump
 	$(MAKE) on-install-or-update
 else
 	$(DOCKER_SHELL) composer install
@@ -86,6 +87,7 @@ composer-outdated: ### Show outdated packages ####
 update: ### Update dependencies ####
 ifeq ("$(ON_INSTALL_OR_UPDATE_HAS_DIRECT_DOCKER_TASKS)","TRUE")
 	$(DOCKER_SHELL) composer update -W --no-scripts
+	$(DOCKER_RUN) composer run-script pre-autoload-dump
 	$(MAKE) on-install-or-update
 else
 	$(DOCKER_SHELL) composer update -W

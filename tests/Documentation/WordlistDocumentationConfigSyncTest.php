@@ -254,6 +254,42 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         self::assertNotContains('acme-corp', $cspellWords);
     }
 
+    #[Test]
+    public function mergeSortedUniqueWordsSortsUnsortedInput(): void
+    {
+        self::assertSame(
+            ['alpha', 'beta'],
+            $this->invokePrivateStatic('mergeSortedUniqueWords', [['beta', 'alpha']]),
+        );
+    }
+
+    #[Test]
+    public function mergeSortedUniqueWordsRemovesDuplicatesAcrossLists(): void
+    {
+        self::assertSame(
+            ['alpha', 'beta'],
+            $this->invokePrivateStatic('mergeSortedUniqueWords', [['alpha'], ['alpha', 'beta']]),
+        );
+    }
+
+    #[Test]
+    public function mergeSortedUniqueWordsIgnoresEmptyStrings(): void
+    {
+        self::assertSame(
+            ['alpha'],
+            $this->invokePrivateStatic('mergeSortedUniqueWords', [['alpha', '']]),
+        );
+    }
+
+    #[Test]
+    public function mergeSortedUniqueWordsMergesMultipleUnsortedLists(): void
+    {
+        self::assertSame(
+            ['alpha', 'beta', 'mango', 'zebra'],
+            $this->invokePrivateStatic('mergeSortedUniqueWords', [['zebra', 'alpha'], ['mango', 'beta']]),
+        );
+    }
+
     /** @param list<string> $expected */
     #[Test]
     #[DataProvider('provideComposerPackageNameSegments')]
@@ -651,6 +687,28 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         yield 'fully qualified class name' => [Installer::class, ['WyriHaximus', 'Makefiles', 'Composer', 'Installer']];
         yield 'empty string returns empty list' => ['', []];
         yield 'only backslashes returns empty list distinguishing ltrim from no ltrim' => ['\\\\', []];
+    }
+
+    #[Test]
+    public function composerInstalledPackageNamesSkipsUnreadableLockFile(): void
+    {
+        if (! ProjectSandbox::canSimulateUnreadableFiles()) {
+            self::markTestSkipped('File permission tests cannot run on Windows or as root.');
+        }
+
+        $root = $this->getTmpDir() . 'unreadable-lock/';
+        mkdir($root, 0777, true);
+        file_put_contents($root . 'composer.lock', '{"packages":[{"name":"acme/widget"}]}');
+        chmod($root . 'composer.lock', 0000);
+
+        try {
+            $names = $this->invokePrivateStatic('composerInstalledPackageNames', [$root]);
+            self::assertIsArray($names);
+            self::assertNotContains('acme/widget', $names);
+        } finally {
+            chmod($root . 'composer.lock', 0644);
+            unlink($root . 'composer.lock');
+        }
     }
 
     private function createProjectTree(string $wordlistContents, string $cspellContents): string
