@@ -37,6 +37,9 @@ migrations-php-remove-old-appveyor-yml-config: #### Make sure we remove `appveyo
 migrations-php-remove-old-travis-yml-config: #### Make sure we remove `.travis.yml` ##*I*##
 	($(DOCKER_RUN) rm .travis.yml || true)
 
+migrations-php-composer-set-platform-php: #### Set `config.platform.php` in `composer.json` to the current PHP version from require with patch `13` ##*I*##
+	($(DOCKER_RUN) php -r '$$composerFile = "composer.json"; if (!file_exists($$composerFile)) {exit;} $$json = json_decode(file_get_contents($$composerFile), true); if (!is_array($$json)) {exit;} if (!array_key_exists("require", $$json)) {exit;} if (!array_key_exists("php", $$json["require"])) {exit;} if (array_key_exists("config", $$json) && array_key_exists("platform", $$json["config"]) && array_key_exists("php", $$json["config"]["platform"])) {exit;} $$phpConstraint = $$json["require"]["php"]; if (preg_match("/^\\^?(\d+\.\d+)/", $$phpConstraint, $$matches)) { $$majorMinor = $$matches[1]; } else { exit; } if (!array_key_exists("config", $$json)) { $$json["config"] = []; } if (!array_key_exists("platform", $$json["config"])) { $$json["config"]["platform"] = []; } $$json["config"]["platform"]["php"] = $$majorMinor . ".13"; file_put_contents($$composerFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");' || true)
+
 migrations-php-ensure-etc-ci-markdown-link-checker-json-exists: #### Make sure we have `etc/ci/markdown-link-checker.json` ##*I*##
 	($(DOCKER_RUN) php -r '$$markdownLinkCheckerFile = "etc/ci/markdown-link-checker.json"; $$json = json_decode("{\"httpHeaders\": [{\"urls\": [\"https://docs.github.com/\"],\"headers\": {\"Accept-Encoding\": \"zstd, br, gzip, deflate\"}}]}"); if (file_exists($$markdownLinkCheckerFile)) {exit;} file_put_contents($$markdownLinkCheckerFile, json_encode($$json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");' || true)
 
