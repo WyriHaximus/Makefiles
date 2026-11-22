@@ -3,7 +3,7 @@ IMAGE_LYCHEE := lycheeverse/lychee:0.24.2-alpine@sha256:2255c0b916cc8fc4193f59a4
 IMAGE_CSPELL := ghcr.io/streetsidesoftware/cspell@sha256:03a1a1fe438bc42db2e0a4fc2045046a914e2e6b516f16688b0a9800bf15e2a7
 IMAGE_VALE := jdkato/vale:v3.23.0@sha256:d87d6355dc8992f92ec39c4c862a388e56e30302a771fd4512c02660fb25cdf3
 DOC_MD_FILES := $(shell find . -name "*.md" -not -name "LICENSE" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.*/*" -not -path "./etc/qa/vale/*")
-DOC_SRC_EXTS := php js ts
+DOC_SRC_EXTS := php js ts yaml yml json5
 DOC_SRC_FIND_NAMES := -name "*.$(firstword $(DOC_SRC_EXTS))" $(foreach ext,$(wordlist 2,$(words $(DOC_SRC_EXTS)),$(DOC_SRC_EXTS)),-o -name "*.$(ext)")
 DOC_SRC_FILES := $(shell find src tests -type f \( $(DOC_SRC_FIND_NAMES) \) 2>/dev/null -not -path "*/TestUtilities/*")
 
