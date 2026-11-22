@@ -5,7 +5,6 @@ Shared [Make](https://en.wikipedia.org/wiki/Make_(software)) targets and a [Comp
 [![Continuous Integration](https://github.com/WyriHaximus/Makefiles/actions/workflows/ci.yaml/badge.svg)](https://github.com/WyriHaximus/Makefiles/actions/workflows/ci.yaml)
 [![Latest Stable Version](https://poser.pugx.org/wyrihaximus/makefiles/v/stable.png)](https://packagist.org/packages/wyrihaximus/makefiles)
 [![Total Downloads](https://poser.pugx.org/wyrihaximus/makefiles/downloads.png)](https://packagist.org/packages/wyrihaximus/makefiles/stats)
-[![Type Coverage](https://shepherd.dev/github/WyriHaximus/makefiles/coverage.svg)](https://shepherd.dev/github/WyriHaximus/makefiles)
 [![License](https://poser.pugx.org/wyrihaximus/makefiles/license.png)](https://packagist.org/packages/wyrihaximus/makefiles)
 
 ## What it does
