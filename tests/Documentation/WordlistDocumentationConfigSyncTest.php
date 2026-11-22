@@ -308,6 +308,7 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         yield 'hyphenated segments' => ['acme-corp/super-widget', ['acme-corp', 'super-widget']];
         yield 'vendor only' => ['solo-vendor', ['solo-vendor']];
         yield 'trims whitespace' => [' spaced / name ', ['spaced', 'name']];
+        yield 'multiple slashes keep remainder as package' => ['vendor/sub/package', ['vendor', 'sub/package']];
     }
 
     #[Test]
@@ -392,6 +393,40 @@ final class WordlistDocumentationConfigSyncTest extends TestCase
         $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
         self::assertIsArray($cspell);
         self::assertSame(['Custom', 'base'], $cspell['words']);
+    }
+
+    #[Test]
+    public function enrichQaWordlistsWithPhpSymbolsHandlesTrailingSeparators(): void
+    {
+        $root = $this->getTmpDir() . 'enrich-qa-trailing/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "manual\n");
+
+        WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols($root . '///');
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertIsArray($cspell['words']);
+        /** @var list<string> $cspellWords */
+        $cspellWords = $cspell['words'];
+        self::assertContains('manual', $cspellWords);
+        self::assertContains('WordlistDocumentationConfigSync', $cspellWords);
+    }
+
+    #[Test]
+    public function addWordsToQaWordlistsHandlesTrailingSeparators(): void
+    {
+        $root = $this->getTmpDir() . 'add-qa-words-trailing/';
+        mkdir($root . 'etc/qa', 0777, true);
+        file_put_contents($root . 'etc/qa/cspell.json', '{"words":["manual"]}');
+        file_put_contents($root . 'etc/qa/vale-vocab.txt', "manual\n");
+
+        WordlistDocumentationConfigSync::addWordsToQaWordlists($root . '///', 'Custom');
+
+        $cspell = json_decode((string) file_get_contents($root . 'etc/qa/cspell.json'), true);
+        self::assertIsArray($cspell);
+        self::assertSame(['Custom', 'manual'], $cspell['words']);
     }
 
     #[Test]
