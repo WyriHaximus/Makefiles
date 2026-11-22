@@ -41,9 +41,11 @@ dataprovider
 dataproviders
 deps
 dev
+execute
 frontmatter
 ghcr
 healthz
+hooks
 inlined
 lychee
 lycheeverse

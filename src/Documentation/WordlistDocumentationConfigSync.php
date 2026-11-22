@@ -44,7 +44,7 @@ use const JSON_UNESCAPED_SLASHES;
 /**
  * Keeps documentation spell-check wordlists aligned.
  *
- * Public API (Makefile migrations and documented call sites only):
+ * Public API for Makefile migrations and documented call sites:
  * {@see sync()}, {@see enrichQaWordlistsWithPhpSymbols()}, {@see addWordsToQaWordlists()}.
  */
 final class WordlistDocumentationConfigSync

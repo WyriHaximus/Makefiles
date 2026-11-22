@@ -49,7 +49,7 @@ final class ServiceLifecycleTest extends TestCase
     public function serviceCleanupTargetFromRecipeLineRequiresAnchorAtStart(): void
     {
         $method = new ReflectionMethod(ServiceLifecycleInjector::class, 'serviceCleanupTargetFromRecipeLine');
-        // A line with service_cleanup but not immediately after tab should return null
+        // A line where service_cleanup does not follow one leading tab should return null
         self::assertNull($method->invoke(null, "\t service_cleanup(down)"));
         self::assertNull($method->invoke(null, "\t\tservice_cleanup(down)"));
     }

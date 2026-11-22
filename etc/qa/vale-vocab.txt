@@ -1617,6 +1617,7 @@ highlight_file
 highlight_string
 hmac
 hook
+hooks
 hrtime
 html
 html_entity_decode

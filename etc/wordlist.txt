@@ -13,12 +13,14 @@ dataproviders
 deps
 dev
 Diataxis
+execute
 Figlet
 frontmatter
 GHA
 ghcr
 GitHub
 healthz
+hooks
 inlined
 InfectionPHP
 Kiewiet

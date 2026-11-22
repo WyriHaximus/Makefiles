@@ -9,7 +9,7 @@ Shared [Make](https://en.wikipedia.org/wiki/Make_(software)) targets and a [Comp
 
 ## What it does
 
-When you add this package as a **development** dependency, the Composer plugin runs on `composer install` and `composer update` (during autoload dump) and writes a root **`Makefile`** tailored to your project. The plugin generates that file from [`templates/Makefile.PHP`](templates/Makefile.PHP); you normally edit your project's `etc/Makefile` for project-specific targets instead of hand-maintaining the root file.
+When you add this package as a **development** dependency, the Composer plugin runs on `composer install` and `composer update` (during autoload dump) and writes a root **`Makefile`** tailored to your project. The plugin generates that file from [`templates/Makefile.PHP`](templates/Makefile.PHP); edit your project's `etc/Makefile` for project-specific targets instead of hand-maintaining the root file.
 
 The generated `Makefile` wires up:
 
@@ -17,13 +17,13 @@ The generated `Makefile` wires up:
 - **Workflow targets** such as `make` / `make all` (full QA) and `make contrib` (a smaller subset suited to day-to-day contributions).
 - **Discoverable help** via `make help`, `make help-contrib`, and `make help-migrations`.
 - **GitHub Actions job lists** as JSON from targets like `make task-list-ci-locked` for matrix CI pipelines.
-- **Post-install maintenance** via `make on-install-or-update`, which runs migration targets and hooks used by [Renovate](https://docs.renovatebot.com/) in self-hosted setups.
+- **Post-install maintenance** via `make on-install-or-update`, which runs migration targets and lifecycle callbacks used by [Renovate](https://docs.renovatebot.com/) in self-hosted setups.
 
 Composer also registers `post-install-cmd` / `post-update-cmd` scripts that run `make on-install-or-update` when possible, so new checkouts stay aligned with expected config layout under `etc/qa/`, `etc/ci/`, and related paths.
 
 ## Installation
 
-Require the package as a dev dependency (the plugin activates only when `wyrihaximus/makefiles` appears in `require-dev`, or when working inside this repository itself):
+Require the package as a dev dependency. The plugin activates when `wyrihaximus/makefiles` appears in `require-dev`, or when working inside this repository itself:
 
 ```bash
 composer require --dev wyrihaximus/makefiles
@@ -72,26 +72,26 @@ Targets for tooling typically configured under `etc/qa/`, including:
 - Refactoring upgrades ([Rector](https://getrector.com/)) via `rector-upgrade`
 - Backward compatibility checks ([Roave](https://github.com/Roave/BackwardCompatibilityCheck)) where configured
 
-Many targets honor **supported features** (described under [Configuration](#configuration)) so CI can skip jobs your package does not support (for example when you turn off unit tests or PHP_CodeSniffer).
+The supported-features configuration (described under [Configuration](#configuration)) lets CI skip jobs a package does not support, such as unit tests or PHP_CodeSniffer when turned off.
 
 ### Documentation QA ([`includes/Documentation.QA.mk`](includes/Documentation.QA.mk))
 
 `documentation-qa` runs markdown structure lint ([markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2)), link checking ([lychee](https://github.com/lycheeverse/lychee)), spelling ([cspell](https://cspell.org/)), and prose lint ([Vale](https://vale.sh/)) against project docs.
 
-Shared project terms live in `etc/wordlist.txt` and the `make documentation-wordlist-sync` target copies them into enforced templates via [`WordlistDocumentationConfigSync::sync()`](src/Documentation/WordlistDocumentationConfigSync.php)). On each Composer install or update, [`WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols()`](src/Documentation/WordlistDocumentationConfigSync.php) (migration `migrations-docs-enrich-qa-wordlists-with-php-symbols`) merges loaded PHP symbol names and Composer vendor and package names from `composer.lock` and the root `composer.json` `name` into `etc/qa/cspell.json` and `etc/qa/vale-vocab.txt`. The class exposes only those two helpers plus [`addWordsToQaWordlists()`](src/Documentation/WordlistDocumentationConfigSync.php) for custom terms; everything else is internal.
+Shared project terms live in `etc/wordlist.txt` and the `make documentation-wordlist-sync` target copies them into enforced templates via [`WordlistDocumentationConfigSync::sync()`](src/Documentation/WordlistDocumentationConfigSync.php)). On each Composer install or update, [`WordlistDocumentationConfigSync::enrichQaWordlistsWithPhpSymbols()`](src/Documentation/WordlistDocumentationConfigSync.php) (migration `migrations-docs-enrich-qa-wordlists-with-php-symbols`) merges loaded PHP symbol names and Composer vendor and package names from `composer.lock` and the root `composer.json` `name` into `etc/qa/cspell.json` and `etc/qa/vale-vocab.txt`. The documented API includes those helpers and [`addWordsToQaWordlists()`](src/Documentation/WordlistDocumentationConfigSync.php) for custom terms; the remaining methods are internal.
 
-Packages and applications that ship their own product names, acronyms, or API tokens in documentation can register those spellings with an install migration in `etc/Makefile`. Call [`WordlistDocumentationConfigSync::addWordsToQaWordlists()`](src/Documentation/WordlistDocumentationConfigSync.php) with only the extra strings (variadic). The helper merges into both QA wordlists, drops duplicates and blanks, and keeps entries sorted, so the migration stays idempotent:
+Packages and applications that ship their own product names, acronyms, or API tokens in documentation can register those spellings with an install migration in `etc/Makefile`. Pass extra strings as variadic arguments to [`WordlistDocumentationConfigSync::addWordsToQaWordlists()`](src/Documentation/WordlistDocumentationConfigSync.php). The helper merges into both QA wordlists, drops duplicates and blanks, and keeps entries sorted, so the migration stays idempotent:
 
 ```makefile
 migrations-docs-add-my-package-wordlist: #### Register package-specific documentation spellings ##*I*##
     ($(DOCKER_RUN) php -r '$$autoload = getcwd() . "/vendor/autoload.php"; if (!is_file($$autoload)) {exit;} require $$autoload; \WyriHaximus\Makefiles\Documentation\WordlistDocumentationConfigSync::addWordsToQaWordlists(getcwd(), "AcmeWidget", "subprocess");' || true)
 ```
 
-Use a tab before the recipe line in your real `etc/Makefile` (spaces above are for markdown lint only). Tag the target with `##*I*##` so it runs with other install migrations, then run `make install` in the consuming repository to regenerate the root `Makefile`.
+In your real `etc/Makefile`, indent the recipe with a tab; the spaces above preserve Markdown formatting. Tag the target with `##*I*##` so it runs with other install migrations, then run `make install` in the consuming repository to regenerate the root `Makefile`.
 
 ### Container access ([`includes/ContainerAccess.mk`](includes/ContainerAccess.mk))
 
-`run` and `shell` targets execute commands in the selected PHP image, with volume mounts for the workspace, Composer cache, optional Docker socket access for [Testcontainers](https://testcontainers.com/) when required, and sensible defaults for CI versus interactive TTY use.
+`run` and `shell` targets run commands in the selected PHP image, with volume mounts for the workspace, Composer cache, optional Docker socket access for [Testcontainers](https://testcontainers.com/) when required, and sensible defaults for CI versus interactive TTY use.
 
 ### Aggregates and help
 
@@ -104,7 +104,7 @@ Idempotent `migrations-*` targets normalize repository layout and tool configs (
 
 ### Project-specific targets
 
-The template includes `includes/EXTRA.mk`, which reads from your repository's **`etc/Makefile`**. Put custom targets, Docker Compose service hooks (`extra-services-up/extra-services-down`), and lifecycle hooks there; the generator embeds them when creating the root `Makefile`.
+The template includes `includes/EXTRA.mk`, which reads from your repository's **`etc/Makefile`**. Put custom targets, Docker Compose lifecycle targets (`extra-services-up/extra-services-down`), and lifecycle callbacks there; the generator embeds them when creating the root `Makefile`.
 
 ## Configuration
 
@@ -166,7 +166,7 @@ Optional **feature gates** append `##^feature^##` or `##^one|other^##` (pipe-sep
 
 ### `I` and hash count
 
-Migration targets use `####` in the help prefix (four `#` characters before the description). Those run only under `on-install-or-update`. A target with `##` (two `#` characters) and `I` is also included in local `make all`, but not in `task-list-ci-all`.
+Migration targets use `####` in the help prefix (four `#` characters before the description); `on-install-or-update` invokes them. A target with `##` (two `#` characters) and `I` is also included in local `make all`, but not in `task-list-ci-all`.
 
 Examples from this package:
 
@@ -178,6 +178,7 @@ Custom targets in `etc/Makefile` can use the same markers so `make install` rege
 
 ## License
 
+<!-- vale proselint.CurlyQuotes = NO -->
 The MIT License (MIT)
 
 Copyright © 2026 Cees-Jan Kiewiet
@@ -201,5 +202,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+<!-- vale proselint.CurlyQuotes = yes -->
 <!-- vale neighbor.AllCapsProse = yes -->
 <!-- vale write-good = yes -->

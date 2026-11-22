@@ -34,7 +34,7 @@ final class TaskListInjector
             ],
             4 => ['on-install-or-update'],
         ];
-        // K: CI once on locked deps (ci-locked only), not ci-all or ci-dos.
+        // K: CI on locked deps (ci-locked), not ci-all or ci-dos.
         $typesToTaskMap = [
             'A' => [
                 'all',
