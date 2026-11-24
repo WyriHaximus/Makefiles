@@ -11,7 +11,7 @@ use function rtrim;
 use function strlen;
 
 /**
- * Hardcoded "mini" FIGlet font glyphs.
+ * Glyphs for the hardcoded mini FIGlet font.
  *
  * Based on [mini.flf](https://github.com/cmatsuoka/figlet/blob/master/fonts/mini.flf)
  * by Glenn Chappell (1993), modified by Paul Burton (1996).

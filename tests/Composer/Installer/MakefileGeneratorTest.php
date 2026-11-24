@@ -30,7 +30,7 @@ use const DIRECTORY_SEPARATOR;
 
 final class MakefileGeneratorTest extends TestCase
 {
-    /** @return iterable<string, array{bool, bool, bool, string, list<string>, string}> */
+    /** @return iterable<string, array{0: bool, 1: bool, 2: bool, 3: string, 4: list<string>, 5: string}> */
     public static function provideGenerateCases(): iterable
     {
         $matrix = self::supportedFeaturesMatrixIoOutput();

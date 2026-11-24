@@ -77,7 +77,7 @@ final class DirectDockerDetector
     }
 
     /**
-     * When a package declares extra services, aggregate targets must run on the host so
+     * When a package declares extra services, aggregate targets must run locally so
      * service lifecycle recipes can invoke `docker compose` outside the PHP container.
      */
     public static function injectExtraServicesDirectDockerFlags(string $makefileContents): string
