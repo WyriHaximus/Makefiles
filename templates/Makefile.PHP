@@ -139,6 +139,7 @@ include includes/OnInstallUpdate.mk
 include includes/PHP.mk
 include includes/Documentation.QA.mk
 include includes/ContainerAccess.mk
+include includes/Info.mk
 include includes/Help.mk
 include includes/TaskFinders.mk
 

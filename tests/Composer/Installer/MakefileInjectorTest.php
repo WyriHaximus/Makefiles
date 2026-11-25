@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 use ReflectionMethod;
 use WyriHaximus\Makefiles\Composer\Installer\Base64FileInjector;
+use WyriHaximus\Makefiles\Composer\Installer\DockerEnvironmentInjector;
 use WyriHaximus\Makefiles\Composer\Installer\HelpInjector;
 use WyriHaximus\Makefiles\Composer\Installer\LowestVersionInjector;
 use WyriHaximus\Makefiles\Composer\Installer\RequirementConditionalInjector;
@@ -123,6 +124,66 @@ final class MakefileInjectorTest extends TestCase
             'OPS when_supported_feature("unknown-feature", enabled, "")',
             SupportedFeatures::DEFAULTS,
             'OPS ',
+        ];
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function provideDockerEnvironmentCases(): iterable
+    {
+        yield 'forwards marked environment variables to only the annotated target' => [
+            <<<'MAKEFILE'
+needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##
+	$(DOCKER_RUN) command
+unmarked: ## No token ##*I*##
+	$(DOCKER_RUN) command
+MAKEFILE,
+            <<<'MAKEFILE'
+needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##
+	$(subst docker run,docker run -e GITHUB_TOKEN,$(DOCKER_RUN)) command
+unmarked: ## No token ##*I*##
+	$(DOCKER_RUN) command
+MAKEFILE,
+        ];
+
+        yield 'forwards multiple marked environment variables' => [
+            "needs-tokens: ## Needs tokens ##*I*##%GITHUB_TOKEN|RELEASE_TOKEN%##\n\t\$(DOCKER_RUN) command\n",
+            "needs-tokens: ## Needs tokens ##*I*##%GITHUB_TOKEN|RELEASE_TOKEN%##\n"
+            . "\t\$(subst docker run,docker run -e GITHUB_TOKEN -e RELEASE_TOKEN,\$(DOCKER_RUN)) command\n",
+        ];
+
+        yield 'preserves forwarding across comments and multiple recipes' => [
+            "needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##\n# comment: keep forwarding\n\n"
+            . "\t\$(DOCKER_RUN) first\n\t\$(DOCKER_RUN) second\n",
+            "needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##\n# comment: keep forwarding\n\n"
+            . "\t\$(subst docker run,docker run -e GITHUB_TOKEN,\$(DOCKER_RUN)) first\n"
+            . "\t\$(subst docker run,docker run -e GITHUB_TOKEN,\$(DOCKER_RUN)) second\n",
+        ];
+
+        yield 'does not preserve forwarding for assignments containing conditional keywords' => [
+            "needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##\nVALUE = ifdef feature\n\t\$(DOCKER_RUN) command\n",
+            "needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##\nVALUE = ifdef feature\n\t\$(DOCKER_RUN) command\n",
+        ];
+
+        yield 'forwards environment variables for standalone targets' => [
+            "info-host: ## Show host info ##%DISPLAY|EDITOR|HOSTTYPE|NAME|TERM%##\n\t\$(DOCKER_RUN) command\n",
+            "info-host: ## Show host info ##%DISPLAY|EDITOR|HOSTTYPE|NAME|TERM%##\n"
+            . "\t\$(subst docker run,docker run -e DISPLAY -e EDITOR -e HOSTTYPE -e NAME -e TERM,\$(DOCKER_RUN)) command\n",
+        ];
+
+        yield 'keeps supporting adjacent environment variable markers' => [
+            "needs-tokens: ## Needs tokens ##*I*##%GITHUB_TOKEN%%RELEASE_TOKEN%##\n\t\$(DOCKER_RUN) command\n",
+            "needs-tokens: ## Needs tokens ##*I*##%GITHUB_TOKEN%%RELEASE_TOKEN%##\n"
+            . "\t\$(subst docker run,docker run -e GITHUB_TOKEN -e RELEASE_TOKEN,\$(DOCKER_RUN)) command\n",
+        ];
+
+        yield 'leaves unmarked targets unchanged' => [
+            "unmarked: ## No token ##*I*##\n\t\$(DOCKER_RUN) command\n",
+            "unmarked: ## No token ##*I*##\n\t\$(DOCKER_RUN) command\n",
+        ];
+
+        yield 'does not leak into non-target make content' => [
+            "needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##\n\t\$(DOCKER_RUN) command\ndefine command\n\t\$(DOCKER_RUN) command\nendef\n",
+            "needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##\n\t\$(subst docker run,docker run -e GITHUB_TOKEN,\$(DOCKER_RUN)) command\ndefine command\n\t\$(DOCKER_RUN) command\nendef\n",
         ];
     }
 
@@ -534,6 +595,13 @@ MAKEFILE,
     public function supportedFeatureConditionalInject(string $template, array $supportedFeatures, string $expected): void
     {
         self::assertSame($expected, SupportedFeatureConditionalInjector::inject($template, $supportedFeatures));
+    }
+
+    #[Test]
+    #[DataProvider('provideDockerEnvironmentCases')]
+    public function dockerEnvironmentInject(string $template, string $expected): void
+    {
+        self::assertSame($expected, DockerEnvironmentInjector::inject($template));
     }
 
     #[Test]

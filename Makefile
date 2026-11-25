@@ -684,6 +684,8 @@ shell: ## Provides Shell access in the expected environment ####
 run: ## Provides access in the expected environment to run a single command and then return ####
 	$(DOCKER_RUN) $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
+info-host: ## Show host info ##%DISPLAY|EDITOR|HOSTTYPE|NAME|TERM%##
+	$(subst docker run,docker run -e DISPLAY -e EDITOR -e HOSTTYPE -e NAME -e TERM,$(DOCKER_RUN)) sh -c 'printf "DISPLAY=%s\nEDITOR=%s\nHOSTTYPE=%s\nNAME=%s\nTERM=%s\n" "$${DISPLAY:-<unset>}" "$${EDITOR:-<unset>}" "$${HOSTTYPE:-<unset>}" "$${NAME:-<unset>}" "$${TERM:-<unset>}"'
 help: ## Show this help ####
 	@printf "%s\n" '                                                                                              _'
 	@printf "%s\n" '             ._   o   |_     _.        o   ._ _           _    /   ._ _     _.   |     _    _|_   o   |    _     _'
@@ -723,6 +725,7 @@ help: ## Show this help ####
 	@printf "  \033[32m%-32s\033[0m %s\n" 'help' 'Show this help'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'help-contrib' 'Show the migrations help'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'help-migrations' 'Show the migrations help'
+	@printf "  \033[32m%-32s\033[0m %s\n" 'info-host' 'Show host info'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'install' 'Install dependencies'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'mutation-testing' 'Run mutation testing'
 	@printf "  \033[32m%-32s\033[0m %s\n" 'mutation-testing-raw' 'Run mutation testing'

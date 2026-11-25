@@ -8,7 +8,6 @@ use Composer\IO\IOInterface;
 use RuntimeException;
 use SplFileInfo;
 
-use function assert;
 use function file_exists;
 use function file_get_contents;
 use function is_file;
@@ -74,7 +73,7 @@ final class IncludeLoader
         }
 
         $makefileContents = file_get_contents($makefileIncludePath);
-        assert(is_string($makefileContents));
+        $makefileContents = is_string($makefileContents) ? $makefileContents : '';
 
         $io->write('<info>wyrihaximus/makefiles:</info> Including: ' . $filename);
 
