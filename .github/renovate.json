@@ -63,6 +63,18 @@
             "matchStrings": [
                 "https://github\\.com/(?<depName>[^/]+/[^/]+)/releases/download/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"
             ]
+        },
+        {
+            "customType": "regex",
+            "description": "Docker image pins in includes/Documentation.QA.mk",
+            "managerFilePatterns": [
+                "/includes/Documentation\\.QA\\.mk/"
+            ],
+            "datasourceTemplate": "docker",
+            "matchStrings": [
+                "(?<depName>[^\\s:@]+)(?::(?<currentValue>[^@\\s]+))?@(?<currentDigest>sha256:[a-f0-9]{64})"
+            ],
+            "autoReplaceStringTemplate": "{{{depName}}}{{#if currentValue}}:{{{newValue}}}{{/if}}@{{{newDigest}}}"
         }
     ],
     "packageRules": [
