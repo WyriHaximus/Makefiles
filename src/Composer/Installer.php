@@ -17,7 +17,6 @@ use WyriHaximus\Makefiles\Composer\Installer\RequirementsCollector;
 use WyriHaximus\Makefiles\Composer\Installer\SupportedFeaturesResolver;
 
 use function array_key_exists;
-use function assert;
 use function dirname;
 use function file_get_contents;
 use function is_array;
@@ -86,7 +85,7 @@ final class Installer implements PluginInterface, EventSubscriberInterface
         Requirements $requirements,
     ): void {
         $jsonRaw = file_get_contents($composerJsonPath);
-        assert(is_string($jsonRaw));
+        $jsonRaw = is_string($jsonRaw) ? $jsonRaw : '';
 
         $json = json_decode($jsonRaw, true);
         if (! is_array($json)) {

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Makefiles\Composer\Installer;
 
-use function assert;
 use function base64_encode;
 use function basename;
 use function dirname;
@@ -36,7 +35,7 @@ final class Base64FileInjector
             }
 
             $fileContents = file_get_contents($file);
-            assert(is_string($fileContents));
+            $fileContents = is_string($fileContents) ? $fileContents : '';
 
             $base64FileContents['base64(' . basename($file) . ')'] = base64_encode($fileContents);
         }

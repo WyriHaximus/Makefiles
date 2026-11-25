@@ -7,10 +7,10 @@ namespace WyriHaximus\Makefiles\Composer\Installer;
 use Composer\IO\IOInterface;
 use RuntimeException;
 
-use function assert;
 use function dirname;
 use function file_get_contents;
 use function file_put_contents;
+use function is_dir;
 use function is_file;
 use function is_readable;
 use function is_string;
@@ -19,6 +19,7 @@ use function rtrim;
 use function str_contains;
 use function strlen;
 use function uniqid;
+use function unlink;
 
 use const DIRECTORY_SEPARATOR;
 
@@ -41,11 +42,12 @@ final class MakefileGenerator
         }
 
         $makefileContents = file_get_contents($templatePath);
-        assert(is_string($makefileContents));
+        $makefileContents = is_string($makefileContents) ? $makefileContents : '';
 
         self::announceMakefileGeneration($context->io);
 
         $makefileContents = IncludeLoader::load($context, $makefileContents);
+        $makefileContents = DockerEnvironmentInjector::inject($makefileContents);
         $makefileContents = ExtraServicesInjector::inject($makefileContents, $context->rootPackagePath);
         $makefileContents = ServiceLifecycleInjector::inject($makefileContents);
         $makefileContents = TaskListInjector::inject($context, $makefileContents);
@@ -64,10 +66,29 @@ final class MakefileGenerator
     private static function writeMakefile(string $path, string $contents): void
     {
         $temporaryPath = self::temporaryMakefilePath($path);
-        $written       = file_put_contents($temporaryPath, $contents);
-        assert($written === strlen($contents));
+        try {
+            $written = file_put_contents($temporaryPath, $contents);
+            if ($written !== strlen($contents)) {
+                throw new RuntimeException('Unable to write temporary Makefile.');
+            }
 
-        assert(rename($temporaryPath, $path));
+            if (is_dir($path) || ! rename($temporaryPath, $path)) {
+                throw new RuntimeException('Unable to move temporary Makefile into place.');
+            }
+        } catch (RuntimeException $exception) {
+            self::removeTemporaryFile($temporaryPath);
+
+            throw $exception;
+        }
+    }
+
+    private static function removeTemporaryFile(string $temporaryPath): void
+    {
+        if (! is_file($temporaryPath)) {
+            return;
+        }
+
+        unlink($temporaryPath);
     }
 
     private static function temporaryMakefilePath(string $makefilePath): string

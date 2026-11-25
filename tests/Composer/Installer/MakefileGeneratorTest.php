@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WyriHaximus\Tests\Makefiles\Composer\Installer;
 
+use ErrorException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
@@ -24,6 +25,9 @@ use function file_put_contents;
 use function glob;
 use function mkdir;
 use function preg_quote;
+use function restore_error_handler;
+use function set_error_handler;
+use function str_starts_with;
 use function trim;
 
 use const DIRECTORY_SEPARATOR;
@@ -40,7 +44,13 @@ final class MakefileGeneratorTest extends TestCase
             true,
             false,
             '',
-            ['stub-target:', 'NEEDS=FALSE', 'PHP_VERSION="8.4"', 'alpha: ## Alpha'],
+            [
+                'stub-target:',
+                'NEEDS=FALSE',
+                'PHP_VERSION="8.4"',
+                'alpha: ## Alpha',
+                '$(subst docker run,docker run -e GITHUB_TOKEN,$(DOCKER_RUN)) command',
+            ],
             $matrix
                 . '<info>wyrihaximus/makefiles:</info> Generating Makefile' . "\n"
                 . '<info>wyrihaximus/makefiles:</info> Including: Stub.mk' . "\n"
@@ -91,6 +101,8 @@ supported-features(list)
 supported-features(raw)
 help(main)
 alpha: ## Alpha ####
+needs-token: ## Needs token ##*I*##%GITHUB_TOKEN%##
+	$(DOCKER_RUN) command
 MAKEFILE);
             file_put_contents($reference . 'includes/Stub.mk', "stub-target:\n");
         }
@@ -335,6 +347,48 @@ MAKEFILE);
         self::assertSame("generated\n", file_get_contents($makefilePath));
         self::assertSame([], glob($projectDir . '.Makefile.*.tmp'));
         self::assertSame([], glob(dirname($projectDir) . '/' . basename($projectDir) . '.Makefile.*.tmp'));
+    }
+
+    #[Test]
+    public function writeMakefileRemovesTemporaryFileWhenRenameFails(): void
+    {
+        $projectDir   = $this->getTmpDir() . 'write-makefile-rename-failure/';
+        $makefilePath = $projectDir . 'Makefile';
+        mkdir($makefilePath, 0755, true);
+        $writeMethod = new ReflectionMethod(MakefileGenerator::class, 'writeMakefile');
+
+        try {
+            $writeMethod->invoke(null, $makefilePath, "generated\n");
+            self::fail('Expected Makefile generation to fail when the destination is a directory.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('Unable to move temporary Makefile into place.', $exception->getMessage());
+        }
+
+        self::assertSame([], glob($projectDir . '.Makefile.*.tmp'));
+    }
+
+    #[Test]
+    public function writeMakefileThrowsWhenTemporaryFileCannotBeWritten(): void
+    {
+        $projectDir   = $this->getTmpDir() . 'write-makefile-missing-parent/';
+        $makefilePath = $projectDir . 'Makefile';
+        $writeMethod  = new ReflectionMethod(MakefileGenerator::class, 'writeMakefile');
+        set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+            if (str_starts_with($message, 'file_put_contents(')) {
+                return true;
+            }
+
+            throw new ErrorException($message, 0, $severity, $file, $line);
+        });
+
+        try {
+            $writeMethod->invoke(null, $makefilePath, "generated\n");
+            self::fail('Expected Makefile generation to fail when the parent directory is missing.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('Unable to write temporary Makefile.', $exception->getMessage());
+        } finally {
+            restore_error_handler();
+        }
     }
 
     private static function supportedFeaturesMatrixIoOutput(): string

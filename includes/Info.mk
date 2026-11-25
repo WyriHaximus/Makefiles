@@ -1,0 +1,2 @@
+info-host: ## Show host info ##%DISPLAY|EDITOR|HOSTTYPE|NAME|TERM%##
+	$(DOCKER_RUN) sh -c 'printf "DISPLAY=%s\nEDITOR=%s\nHOSTTYPE=%s\nNAME=%s\nTERM=%s\n" "$${DISPLAY:-<unset>}" "$${EDITOR:-<unset>}" "$${HOSTTYPE:-<unset>}" "$${NAME:-<unset>}" "$${TERM:-<unset>}"'
