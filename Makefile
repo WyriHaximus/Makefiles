@@ -649,7 +649,7 @@ composer-show: ### Show dependencies ####
 
 IMAGE_MARKDOWNLINT := davidanson/markdownlint-cli2:v0.17.1
 IMAGE_LYCHEE := lycheeverse/lychee:0.24.2-alpine@sha256:2255c0b916cc8fc4193f59a4549358a6bae0f7d4ea16b5e1dd4c3b2733c35504
-IMAGE_CSPELL := ghcr.io/streetsidesoftware/cspell@sha256:03a1a1fe438bc42db2e0a4fc2045046a914e2e6b516f16688b0a9800bf15e2a7
+IMAGE_CSPELL := ghcr.io/streetsidesoftware/cspell@sha256:d16ebc7f7b81414c500f279b0f96c43a8c1bfa04279b9b8d98d13c300e2b7095
 IMAGE_VALE := jdkato/vale:v3.23.0@sha256:d87d6355dc8992f92ec39c4c862a388e56e30302a771fd4512c02660fb25cdf3
 DOC_MD_FILES := $(shell find . -name "*.md" -not -name "LICENSE" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.*/*" -not -path "./etc/qa/vale/*")
 DOC_SRC_EXTS := php js ts yaml yml json5
