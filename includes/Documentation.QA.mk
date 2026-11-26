@@ -1,7 +1,7 @@
 IMAGE_MARKDOWNLINT := davidanson/markdownlint-cli2:v0.17.1
 IMAGE_LYCHEE := lycheeverse/lychee:0.24.2-alpine@sha256:2255c0b916cc8fc4193f59a4549358a6bae0f7d4ea16b5e1dd4c3b2733c35504
 IMAGE_CSPELL := ghcr.io/streetsidesoftware/cspell@sha256:d16ebc7f7b81414c500f279b0f96c43a8c1bfa04279b9b8d98d13c300e2b7095
-IMAGE_VALE := jdkato/vale:v3.28.1@sha256:42b74f7f3ea7dd60554181037a8899a190516b9d48b67d157b09e5df791f9115
+IMAGE_VALE := jdkato/vale:v3.29.0@sha256:6cc1dc7b094ff1d93cee6af6a7ae7e46edf5a81fa4eb775e01e05bda0f2260a9
 DOC_MD_FILES := $(shell find . -name "*.md" -not -name "LICENSE" -not -path "./var/*" -not -path "./vendor/*" -not -path "./.*/*" -not -path "./etc/qa/vale/*")
 DOC_SRC_EXTS := php js ts yaml yml json5
 DOC_SRC_FIND_NAMES := -name "*.$(firstword $(DOC_SRC_EXTS))" $(foreach ext,$(wordlist 2,$(words $(DOC_SRC_EXTS)),$(DOC_SRC_EXTS)),-o -name "*.$(ext)")
