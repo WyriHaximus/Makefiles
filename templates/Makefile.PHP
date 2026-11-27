@@ -97,6 +97,16 @@ else
     endif
 endif
 
+PHPUNIT_COVERAGE_DETECT:=php -r 'echo (extension_loaded("pcov") || extension_loaded("xdebug")) ? "1" : "0";'
+ifeq ("$(IN_DOCKER)","TRUE")
+    PHPUNIT_DOCKER_COVERAGE_ENABLED:=$(shell $(PHPUNIT_COVERAGE_DETECT))
+else ifneq ($(strip $(DOCKER_RUN_WITH_SOCKET)),)
+    PHPUNIT_DOCKER_COVERAGE_ENABLED:=$(shell $(DOCKER_RUN_WITH_SOCKET) $(PHPUNIT_COVERAGE_DETECT))
+else
+    PHPUNIT_DOCKER_COVERAGE_ENABLED:=$(shell $(PHPUNIT_COVERAGE_DETECT))
+endif
+PHPUNIT_RAW_COVERAGE_ENABLED:=$(shell $(PHPUNIT_COVERAGE_DETECT))
+
 INFECTION_THREADS_DETECT=php -r '$$f="etc/qa/infection.json5"; if (!is_file($$f)) {echo "0"; exit;} $$j=json_decode(file_get_contents($$f), true); echo (is_array($$j) && array_key_exists("threads", $$j)) ? "1" : "0";'
 ifeq ("$(IN_DOCKER)","TRUE")
     INFECTION_CONFIG_HAS_THREADS=$(shell $(INFECTION_THREADS_DETECT))
