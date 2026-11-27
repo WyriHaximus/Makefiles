@@ -25,34 +25,38 @@ cs: ## Check the code for code style issues ##*ELCH*##^code-style^##
 stan: ## Run static analysis (PHPStan) ##*LCH*##^static-analysis^##
 	$(DOCKER_SHELL) vendor/bin/phpstan analyse --ansi --configuration=./etc/qa/phpstan.neon
 
+PHPUNIT_COVERAGE_OPTIONS:=--coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+PHPUNIT_DOCKER_COVERAGE_OPTIONS:=$(if $(filter 1,$(PHPUNIT_DOCKER_COVERAGE_ENABLED)),$(PHPUNIT_COVERAGE_OPTIONS),)
+PHPUNIT_RAW_COVERAGE_OPTIONS:=$(if $(filter 1,$(PHPUNIT_RAW_COVERAGE_ENABLED)),$(PHPUNIT_COVERAGE_OPTIONS),)
+
 unit-testing: ## Run tests ##*AE*##^unit-tests^##
 	service_start(before-unit-tests-service)
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always -c ./etc/qa/phpunit.xml $(PHPUNIT_DOCKER_COVERAGE_OPTIONS)
 	$(MAKE) coverage-guard
 	service_cleanup(after-unit-tests-service)
 
 unit-testing-filter: ## Run tests with specified filter ####^unit-tests^##
 	service_start(before-unit-tests-service)
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always --filter=$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/phpunit --colors=always --filter=$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)) -c ./etc/qa/phpunit.xml $(PHPUNIT_DOCKER_COVERAGE_OPTIONS)
 	service_cleanup(after-unit-tests-service)
 
 unit-testing-raw: ## Run tests ##*D*##^unit-tests^##
-	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml --coverage-text --coverage-html ./var/phpunit/coverage --coverage-clover ./var/phpunit/coverage/clover.xml
+	php vendor/phpunit/phpunit/phpunit --colors=always -c ./etc/qa/phpunit.xml $(PHPUNIT_RAW_COVERAGE_OPTIONS)
 	$(MAKE) coverage-guard-raw
 
 coverage-guard: ## Enforce code coverage rules ####
-	$(DOCKER_RUN) vendor/bin/coverage-guard check ./var/phpunit/coverage/clover.xml --config=./etc/qa/coverage-guard.php
+	@$(if $(filter 1,$(PHPUNIT_DOCKER_COVERAGE_ENABLED)),$(DOCKER_RUN) vendor/bin/coverage-guard check ./var/phpunit/coverage/clover.xml --config=./etc/qa/coverage-guard.php,:)
 
 coverage-guard-raw: ## Enforce code coverage rules ####
-	php vendor/bin/coverage-guard check ./var/phpunit/coverage/clover.xml --config=./etc/qa/coverage-guard.php
+	@$(if $(filter 1,$(PHPUNIT_RAW_COVERAGE_ENABLED)),php vendor/bin/coverage-guard check ./var/phpunit/coverage/clover.xml --config=./etc/qa/coverage-guard.php,:)
 
 mutation-testing: ## Run mutation testing ##*LCH*##^static-analysis|unit-tests^##
 	service_start(before-unit-tests-service)
-	$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" $(INFECTION_THREADS_CLI)
+	$(if $(filter 1,$(PHPUNIT_DOCKER_COVERAGE_ENABLED)),$(DOCKER_RUN_WITH_SOCKET) vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" $(INFECTION_THREADS_CLI),:)
 	service_cleanup(after-unit-tests-service)
 
 mutation-testing-raw: ## Run mutation testing ####^static-analysis|unit-tests^##
-	vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" $(INFECTION_THREADS_CLI)
+	$(if $(filter 1,$(PHPUNIT_RAW_COVERAGE_ENABLED)),vendor/bin/infection --ansi --log-verbosity=all --ignore-msi-with-no-mutations --configuration=./etc/qa/infection.json5 --static-analysis-tool=phpstan --static-analysis-tool-options="--memory-limit=-1" $(INFECTION_THREADS_CLI),:)
 
 composer-require-checker: ## Ensure we require every package used in this package directly ##*EC*##^composer-dependency-checkers^##
 	$(DOCKER_SHELL) vendor/bin/composer-require-checker --ignore-parse-errors --ansi -vvv --config-file=./etc/qa/composer-require-checker.json
